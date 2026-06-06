@@ -1,0 +1,146 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-accent-glow: var(--accent-glow);
+  --font-display: "Satoshi", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+  /* AUREVON dark palette */
+  --background: oklch(0.13 0.015 280); /* #0A0A0F */
+  --foreground: oklch(0.96 0.01 280); /* #F0EEF8 */
+  --surface: oklch(0.17 0.018 280); /* #111118 */
+  --card: oklch(0.17 0.018 280);
+  --card-foreground: oklch(0.96 0.01 280);
+  --popover: oklch(0.17 0.018 280);
+  --popover-foreground: oklch(0.96 0.01 280);
+  --primary: oklch(0.96 0.01 280);
+  --primary-foreground: oklch(0.13 0.015 280);
+  --secondary: oklch(0.22 0.02 280);
+  --secondary-foreground: oklch(0.96 0.01 280);
+  --muted: oklch(0.22 0.02 280);
+  --muted-foreground: oklch(0.65 0.025 280); /* #8B8899 */
+  --accent: oklch(0.66 0.18 285); /* #7C6EFF */
+  --accent-foreground: oklch(0.98 0.005 280);
+  --accent-glow: oklch(0.72 0.2 285);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.98 0.005 280);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.66 0.18 285 / 50%);
+}
+
+.dark {
+  --background: oklch(0.13 0.015 280);
+  --foreground: oklch(0.96 0.01 280);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    letter-spacing: -0.035em;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+@utility container-aurevon {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+  max-width: 1200px;
+  @media (min-width: 768px) {
+    padding-inline: 2rem;
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility surface-card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--surface) 100%, transparent),
+    color-mix(in oklab, var(--surface) 60%, transparent)
+  );
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+}
+
+@utility glow-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent),
+    0 20px 60px -20px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+@utility browser-mockup {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent),
+    0 4px 6px -2px rgb(0 0 0 / 20%),
+    0 20px 40px -12px rgb(0 0 0 / 45%),
+    0 0 60px -16px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+@utility browser-mockup-lg {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent),
+    0 8px 16px -4px rgb(0 0 0 / 30%),
+    0 32px 64px -16px rgb(0 0 0 / 55%),
+    0 0 80px -20px color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+@utility section-divider {
+  border-top: 1px solid var(--color-border);
+}
