@@ -74,13 +74,13 @@ function ContactPage() {
 
   return (
     <>
-      <section className="pt-24 md:pt-28 pb-6">
+      <section className="pt-[5.5rem] md:pt-28 pb-6">
         <div className="container-aurevon max-w-4xl">
-          <div className="text-xs uppercase tracking-[0.3em] text-accent">Contact</div>
-          <h1 className="mt-4 text-5xl md:text-6xl text-balance leading-[1.05]">
+          <div className="text-[11px] md:text-xs uppercase tracking-[0.22em] md:tracking-[0.3em] text-accent">Contact</div>
+          <h1 className="mt-4 text-[2.35rem] min-[390px]:text-[2.6rem] md:text-6xl text-balance leading-[1.06] md:leading-[1.05]">
             Let's talk about your website.
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground max-w-2xl">
+          <p className="mt-5 text-base md:text-lg text-muted-foreground max-w-2xl">
             Share a few details about your business. We'll get back within one working day with a thoughtful proposal — design direction, scope and timeline.
           </p>
         </div>
@@ -93,7 +93,7 @@ function ContactPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="surface-card p-8 md:p-10"
+            className="surface-card p-5 md:p-10"
           >
             {submitted ? (
               <div className="text-center py-10">
@@ -154,33 +154,57 @@ function ContactPage() {
           </motion.div>
 
           <aside className="space-y-4">
-            <div className="surface-card p-6">
-              <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-3 text-foreground hover:text-accent transition-colors">
-                <Mail size={16} className="text-accent" />
-                <span className="text-sm">{CONTACT.email}</span>
-              </a>
-              <a href={`tel:${CONTACT.phoneTel}`} className="mt-3 flex items-center gap-3 text-foreground hover:text-accent transition-colors">
-                <Phone size={16} className="text-accent" />
-                <span className="text-sm">{CONTACT.phoneDisplay}</span>
-              </a>
-              <a href={CONTACT.whatsappUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-3 text-foreground hover:text-accent transition-colors">
-                <MessageCircle size={16} className="text-accent" />
-                <span className="text-sm">WhatsApp us directly</span>
-              </a>
-              <div className="mt-3 flex items-center gap-3 text-foreground">
-                <MapPin size={16} className="text-accent" />
-                <span className="text-sm">{CONTACT.location}</span>
-              </div>
-            </div>
-            <div className="surface-card p-6">
-              <h4 className="text-foreground">What happens next</h4>
-              <ol className="mt-3 space-y-3 text-sm text-muted-foreground">
-                <li><span className="text-accent">01 ·</span> We reply within 1 working day.</li>
-                <li><span className="text-accent">02 ·</span> Short call to understand your business.</li>
-                <li><span className="text-accent">03 ·</span> You receive a clear written proposal.</li>
-              </ol>
-            </div>
-          </aside>
+  <div className="surface-card p-6">
+    <h4 className="text-foreground">What happens next</h4>
+    <ol className="mt-3 space-y-3 text-sm text-muted-foreground">
+      <li>
+        <span className="text-accent">01 ·</span> We reply within 1 working
+        day.
+      </li>
+      <li>
+        <span className="text-accent">02 ·</span> Short call to understand
+        your business.
+      </li>
+      <li>
+        <span className="text-accent">03 ·</span> You receive a clear written
+        proposal.
+      </li>
+    </ol>
+  </div>
+
+  <div className="surface-card p-6">
+    <a
+      href={`mailto:${CONTACT.email}`}
+      className="flex items-center gap-3 text-foreground hover:text-accent transition-colors"
+    >
+      <Mail size={16} className="text-accent" />
+      <span className="text-sm">{CONTACT.email}</span>
+    </a>
+
+    <a
+      href={`tel:${CONTACT.phoneTel}`}
+      className="mt-3 flex items-center gap-3 text-foreground hover:text-accent transition-colors"
+    >
+      <Phone size={16} className="text-accent" />
+      <span className="text-sm">{CONTACT.phoneDisplay}</span>
+    </a>
+
+    <a
+      href={CONTACT.whatsappUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-3 flex items-center gap-3 text-foreground hover:text-accent transition-colors"
+    >
+      <MessageCircle size={16} className="text-accent" />
+      <span className="text-sm">WhatsApp us directly</span>
+    </a>
+
+    <div className="mt-3 flex items-center gap-3 text-foreground">
+      <MapPin size={16} className="text-accent" />
+      <span className="text-sm">{CONTACT.location}</span>
+    </div>
+  </div>
+</aside>
         </div>
       </Section>
     </>

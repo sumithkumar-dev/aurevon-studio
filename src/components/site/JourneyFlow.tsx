@@ -21,9 +21,9 @@ export function JourneyFlow() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-80px" }}
               transition={{ delay: i * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="relative surface-card p-6"
+              className="relative surface-card p-5 md:p-6"
             >
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-5 md:mb-6">
                 <div className="size-10 rounded-xl bg-secondary border border-border flex items-center justify-center">
                   <Icon size={18} strokeWidth={1.6} />
                 </div>

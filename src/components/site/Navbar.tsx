@@ -82,23 +82,23 @@ export function Navbar() {
   return (
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled
+        scrolled || open
           ? "backdrop-blur-xl bg-background/70 border-b border-border"
           : "bg-transparent border-b border-transparent"
       }`}
     >
-      <div className="container-aurevon flex h-16 md:h-18 items-center justify-between">
+      <div className="container-aurevon flex h-14 md:h-18 items-center justify-between">
         {/* Logo always goes home */}
         <Link
           to="/"
           aria-label="AUREVON — Home"
-          className="group flex items-center gap-2.5"
+          className="group flex min-w-0 items-center gap-2"
         >
           <span className="relative flex">
             <span className="size-2 rounded-full bg-accent shadow-[0_0_14px_var(--accent)] transition-transform duration-500 group-hover:scale-125" />
             <span className="absolute inset-0 size-2 rounded-full bg-accent/40 animate-ping" />
           </span>
-          <span className="font-display text-xl tracking-[0.22em] text-foreground transition-colors duration-300 group-hover:text-accent">
+          <span className="font-display text-base min-[360px]:text-lg md:text-xl tracking-[0.18em] md:tracking-[0.22em] text-foreground transition-colors duration-300 group-hover:text-accent">
             AUREVON
           </span>
         </Link>
@@ -176,7 +176,7 @@ export function Navbar() {
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden relative size-10 grid place-items-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary"
+          className="md:hidden relative size-9 grid place-items-center rounded-full border border-border text-foreground transition-colors hover:bg-secondary"
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
         >
@@ -206,7 +206,7 @@ export function Navbar() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={() => setOpen(false)}
-              className="md:hidden fixed inset-0 top-16 bg-background/60 backdrop-blur-sm"
+              className="md:hidden fixed inset-0 top-14 bg-background/60 backdrop-blur-sm"
             />
             <motion.div
               key="drawer"
@@ -214,10 +214,10 @@ export function Navbar() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "-100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 280, damping: 32 }}
-              className="md:hidden fixed left-3 right-3 top-20 z-50 rounded-3xl border border-border bg-background/95 backdrop-blur-2xl shadow-[0_30px_80px_rgba(0,0,0,0.6)] overflow-hidden"
+              className="md:hidden fixed left-3 right-3 top-16 z-50 max-h-[calc(100dvh-4.5rem)] rounded-2xl border border-border bg-background/95 backdrop-blur-2xl shadow-[0_24px_64px_rgba(0,0,0,0.55)] overflow-y-auto overflow-x-hidden"
             >
-              <div className="p-6 flex flex-col">
-                <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-4">
+              <div className="p-4 min-[390px]:p-5 flex flex-col">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground mb-3">
                   Menu
                 </div>
                 <nav className="flex flex-col">
@@ -232,10 +232,10 @@ export function Navbar() {
                       >
                         <Link
                           to={l.to}
-                          className={`group flex items-center justify-between rounded-2xl px-4 py-4 text-2xl font-display tracking-wide transition-all duration-300 ${
+                          className={`group flex items-center justify-between rounded-xl px-3.5 py-3 text-xl min-[390px]:text-[1.35rem] font-display tracking-wide transition-all duration-300 ${
                             isActive
                               ? "text-accent bg-secondary/60"
-                              : "text-foreground hover:bg-secondary/40 hover:translate-x-1"
+                            : "text-foreground hover:bg-secondary/40"
                           }`}
                         >
                           <span className="flex items-center gap-3">
@@ -264,11 +264,11 @@ export function Navbar() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.3 }}
-                  className="mt-6"
+                  className="mt-5"
                 >
                   <Link
                     to="/contact"
-                    className="flex items-center justify-center rounded-full bg-accent text-accent-foreground px-5 py-3.5 text-sm font-medium hover:bg-accent-glow transition-colors"
+                    className="flex items-center justify-center rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
                   >
                     Request Proposal
                   </Link>

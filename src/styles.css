@@ -69,6 +69,8 @@
 @layer base {
   html {
     color-scheme: dark;
+    overflow-x: hidden;
+    text-size-adjust: 100%;
   }
   * {
     border-color: var(--color-border);
@@ -79,6 +81,7 @@
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
   h1,
   h2,
@@ -97,7 +100,7 @@
 @utility container-aurevon {
   width: 100%;
   margin-inline: auto;
-  padding-inline: 1.25rem;
+  padding-inline: clamp(0.9375rem, 4vw, 1.25rem);
   max-width: 1200px;
   @media (min-width: 768px) {
     padding-inline: 2rem;

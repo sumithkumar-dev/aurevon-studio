@@ -9,28 +9,28 @@ export function CtaPanel() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-100px" }}
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="relative overflow-hidden surface-card p-10 md:p-16 text-center"
+      className="relative overflow-hidden surface-card p-6 min-[390px]:p-8 md:p-16 text-center"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,color-mix(in_oklab,var(--accent)_30%,transparent),transparent_60%)] pointer-events-none" />
       <div className="relative">
-        <div className="text-xs uppercase tracking-[0.3em] text-accent">Ready when you are</div>
-        <h2 className="mt-5 text-4xl md:text-6xl text-balance max-w-3xl mx-auto">
+        <div className="text-[11px] md:text-xs uppercase tracking-[0.22em] md:tracking-[0.3em] text-accent">Ready when you are</div>
+        <h2 className="mt-4 md:mt-5 text-[2rem] min-[390px]:text-[2.25rem] md:text-6xl text-balance max-w-3xl mx-auto">
           Give your business the online presence it deserves.
         </h2>
-        <p className="mt-5 text-muted-foreground max-w-xl mx-auto leading-relaxed">
+        <p className="mt-4 md:mt-5 text-sm min-[390px]:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
           Tell us about your clinic, café, or shop. We'll send a clear proposal — what we'll build,
           how long it takes, and what it costs. No pressure, no jargon.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-7 md:mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             to="/contact"
-            className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
+            className="inline-flex w-full min-[390px]:w-auto items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-6 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
           >
             Request Proposal <ArrowUpRight size={16} />
           </Link>
           <Link
             to="/portfolio"
-            className="inline-flex items-center gap-2 rounded-full border border-border px-6 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+            className="inline-flex w-full min-[390px]:w-auto items-center justify-center gap-2 rounded-full border border-border px-6 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
           >
             See examples first
           </Link>

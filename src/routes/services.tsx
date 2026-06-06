@@ -48,13 +48,13 @@ function ServicesPage() {
   });
   return (
     <>
-      <section className="pt-24 md:pt-28 pb-6">
+      <section className="pt-[5.5rem] md:pt-28 pb-6">
         <div className="container-aurevon max-w-4xl">
-          <div className="text-xs uppercase tracking-[0.3em] text-accent">Services</div>
-          <h1 className="mt-4 text-5xl md:text-6xl text-balance leading-[1.05]">
+          <div className="text-[11px] md:text-xs uppercase tracking-[0.22em] md:tracking-[0.3em] text-accent">Services</div>
+          <h1 className="mt-4 text-[2.35rem] min-[390px]:text-[2.6rem] md:text-6xl text-balance leading-[1.06] md:leading-[1.05]">
             Websites built around the way your business <em className="text-accent not-italic">actually</em> works.
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground max-w-2xl">
+          <p className="mt-5 text-base md:text-lg text-muted-foreground max-w-2xl">
             Every engagement is shaped around real outcomes — clearer information, easier contact, stronger first impressions.
           </p>
         </div>
@@ -71,12 +71,12 @@ function ServicesPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
                 transition={{ delay: (i % 2) * 0.1, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="surface-card p-8"
+                className="surface-card p-5 md:p-8"
               >
                 <div className="size-12 rounded-xl bg-secondary border border-border flex items-center justify-center mb-6">
                   <Icon size={20} strokeWidth={1.6} />
                 </div>
-                <h2 className="text-3xl text-foreground">{s.title}</h2>
+                <h2 className="text-2xl md:text-3xl text-foreground">{s.title}</h2>
                 <p className="mt-1 text-accent text-sm">{s.summary}</p>
                 <p className="mt-4 text-muted-foreground leading-relaxed">{s.desc}</p>
                 <ul className="mt-6 grid sm:grid-cols-2 gap-2">

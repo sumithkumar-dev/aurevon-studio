@@ -22,12 +22,12 @@ export function Benefits() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-80px" }}
             transition={{ delay: (i % 3) * 0.08, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="group surface-card p-6 hover:border-accent/40 transition-colors"
+            className="group surface-card p-5 md:p-6 hover:border-accent/40 transition-colors"
           >
             <div className="size-11 rounded-xl bg-secondary border border-border flex items-center justify-center mb-5 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
               <Icon size={18} strokeWidth={1.6} />
             </div>
-            <h3 className="text-xl text-foreground">{it.t}</h3>
+            <h3 className="text-lg md:text-xl text-foreground">{it.t}</h3>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{it.d}</p>
           </motion.div>
         );
