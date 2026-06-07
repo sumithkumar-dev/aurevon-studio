@@ -48,18 +48,16 @@ type Lead = {
   budget: string;
   message: string | null;
   created_at: string;
+  status: LeadStatus;
 };
 
 type LeadStatus = "New" | "Contacted" | "Proposal Sent" | "Closed";
 type LeadPriority = "High" | "Medium" | "Low";
-type LeadMeta = {
-  status: LeadStatus;
-  priority: LeadPriority;
-};
+type LeadNotes = Record<string, string>;
 
 const STATUS_OPTIONS: LeadStatus[] = ["New", "Contacted", "Proposal Sent", "Closed"];
 const PRIORITY_OPTIONS: LeadPriority[] = ["High", "Medium", "Low"];
-const META_STORAGE_KEY = "aurevon-admin-lead-meta";
+const NOTES_STORAGE_KEY = "aurevon-admin-lead-notes";
 
 function AdminDashboard() {
   useMeta({ title: "Admin — AUREVON" });
@@ -172,7 +170,8 @@ function LoginScreen() {
 
 function Dashboard({ email }: { email: string }) {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [leadMeta, setLeadMeta] = useState<Record<string, LeadMeta>>({});
+  // notes remain local-only (not in Supabase schema); status is Supabase-only
+  const [leadNotes, setLeadNotes] = useState<LeadNotes>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,18 +180,19 @@ function Dashboard({ email }: { email: string }) {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Persist notes only (not status — that lives in Supabase)
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(META_STORAGE_KEY);
-      if (stored) setLeadMeta(JSON.parse(stored) as Record<string, LeadMeta>);
+      const stored = window.localStorage.getItem(NOTES_STORAGE_KEY);
+      if (stored) setLeadNotes(JSON.parse(stored) as LeadNotes);
     } catch {
-      setLeadMeta({});
+      setLeadNotes({});
     }
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(META_STORAGE_KEY, JSON.stringify(leadMeta));
-  }, [leadMeta]);
+    window.localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(leadNotes));
+  }, [leadNotes]);
 
   async function load({ quiet = false }: { quiet?: boolean } = {}) {
     if (quiet) setRefreshing(true);
@@ -219,16 +219,18 @@ function Dashboard({ email }: { email: string }) {
     load();
   }, []);
 
-  const getMeta = (lead: Lead): LeadMeta => ({
-    status: leadMeta[lead.id]?.status ?? deriveStatus(lead),
-    priority: leadMeta[lead.id]?.priority ?? derivePriority(lead),
-  });
+  // status comes directly from lead.status (Supabase); priority remains derived
+  const getStatus = (lead: Lead): LeadStatus =>
+    (lead.status as LeadStatus) ?? "New";
+
+  const getPriority = (lead: Lead): LeadPriority => derivePriority(lead);
+
+  const getNotes = (lead: Lead): string => leadNotes[lead.id] ?? "";
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return leads;
     return leads.filter((l) => {
-      const meta = getMeta(l);
       return [
         l.name,
         l.business_name,
@@ -237,18 +239,18 @@ function Dashboard({ email }: { email: string }) {
         l.industry,
         l.budget,
         l.message ?? "",
-        meta.status,
-        meta.priority,
+        getStatus(l),
+        getPriority(l),
       ].some((v) => v.toLowerCase().includes(s));
     });
-  }, [leads, leadMeta, q]);
+  }, [leads, q]);
 
   const stats = useMemo(() => {
     const thisWeek = leads.filter((l) => isWithinDays(l.created_at, 7)).length;
-    const newCount = leads.filter((l) => getMeta(l).status === "New").length;
-    const highPriority = leads.filter((l) => getMeta(l).priority === "High").length;
+    const newCount = leads.filter((l) => getStatus(l) === "New").length;
+    const highPriority = leads.filter((l) => getPriority(l) === "High").length;
     const proposalOrClosed = leads.filter((l) =>
-      ["Proposal Sent", "Closed"].includes(getMeta(l).status),
+      ["Proposal Sent", "Closed"].includes(getStatus(l)),
     ).length;
 
     return {
@@ -259,19 +261,31 @@ function Dashboard({ email }: { email: string }) {
       proposalOrClosed,
       uniqueBusinesses: new Set(leads.map((l) => l.business_name.toLowerCase())).size,
     };
-  }, [leads, leadMeta]);
+  }, [leads]);
 
-  function updateLeadMeta(id: string, patch: Partial<LeadMeta>) {
-    const lead = leads.find((l) => l.id === id);
-    if (!lead) return;
-    setLeadMeta((prev) => ({
-      ...prev,
-      [id]: {
-        ...getMeta(lead),
-        ...prev[id],
-        ...patch,
-      },
-    }));
+  async function updateLeadStatus(id: string, status: LeadStatus) {
+    const { error: err } = await supabase
+      .from("contact_submissions")
+      .update({ status })
+      .eq("id", id);
+
+    if (err) {
+      console.error("Status update failed:", err.message);
+      return;
+    }
+
+    // Optimistically update local leads state so UI reflects the change
+    // immediately without a full refetch
+    setLeads((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, status } : l)),
+    );
+
+    // Keep the drawer in sync if this lead is currently selected
+    setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
+  }
+
+  function updateLeadNotes(id: string, notes: string) {
+    setLeadNotes((prev) => ({ ...prev, [id]: notes }));
   }
 
   async function confirmDeleteLead() {
@@ -286,7 +300,7 @@ function Dashboard({ email }: { email: string }) {
     }
 
     setLeads((prev) => prev.filter((l) => l.id !== leadToDelete.id));
-    setLeadMeta((prev) => {
+    setLeadNotes((prev) => {
       const next = { ...prev };
       delete next[leadToDelete.id];
       return next;
@@ -431,7 +445,9 @@ function Dashboard({ email }: { email: string }) {
                   </thead>
                   <tbody>
                     {filtered.map((lead) => {
-                      const meta = getMeta(lead);
+                      const status = getStatus(lead);
+                      const priority = getPriority(lead);
+                      const notes = getNotes(lead);
                       return (
                         <tr
                           key={lead.id}
@@ -441,7 +457,7 @@ function Dashboard({ email }: { email: string }) {
                           <td className="px-4 py-4">
                             <div className="font-medium text-foreground">{lead.name}</div>
                             <div className="mt-1 line-clamp-1 max-w-[210px] text-xs text-muted-foreground">
-                              {lead.message?.trim() || "No message provided"}
+                              {notes ? notes : (lead.message?.trim() || "No message provided")}
                             </div>
                           </td>
                           <td className="px-4 py-4">
@@ -450,14 +466,16 @@ function Dashboard({ email }: { email: string }) {
                           </td>
                           <td className="px-4 py-4">
                             <StatusSelect
-                              value={meta.status}
-                              onChange={(status) => updateLeadMeta(lead.id, { status })}
+                              value={status}
+                              onChange={(newStatus) => updateLeadStatus(lead.id, newStatus)}
                             />
                           </td>
                           <td className="px-4 py-4">
                             <PrioritySelect
-                              value={meta.priority}
-                              onChange={(priority) => updateLeadMeta(lead.id, { priority })}
+                              value={priority}
+                              onChange={() => {
+                                // priority is derived from budget; no-op to keep UI consistent
+                              }}
                             />
                           </td>
                           <td className="px-4 py-4 text-muted-foreground">
@@ -500,7 +518,8 @@ function Dashboard({ email }: { email: string }) {
 
               <div className="divide-y divide-border md:hidden">
                 {filtered.map((lead) => {
-                  const meta = getMeta(lead);
+                  const status = getStatus(lead);
+                  const priority = getPriority(lead);
                   return (
                     <button
                       key={lead.id}
@@ -512,10 +531,10 @@ function Dashboard({ email }: { email: string }) {
                           <div className="truncate font-medium text-foreground">{lead.business_name}</div>
                           <div className="mt-1 truncate text-sm text-muted-foreground">{lead.name}</div>
                         </div>
-                        <PriorityBadge priority={meta.priority} />
+                        <PriorityBadge priority={priority} />
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <StatusBadge status={meta.status} />
+                        <StatusBadge status={status} />
                         <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">
                           {lead.budget}
                         </span>
@@ -538,10 +557,11 @@ function Dashboard({ email }: { email: string }) {
       {selected && (
         <LeadDrawer
           lead={selected}
-          meta={getMeta(selected)}
+          notes={getNotes(selected)}
           onClose={() => setSelected(null)}
           onDelete={() => setLeadToDelete(selected)}
-          onMetaChange={(patch) => updateLeadMeta(selected.id, patch)}
+          onStatusChange={(status) => updateLeadStatus(selected.id, status)}
+          onNotesChange={(notes) => updateLeadNotes(selected.id, notes)}
         />
       )}
 
@@ -589,9 +609,44 @@ function LeadDrawer({
   onDelete: () => void;
   onMetaChange: (patch: Partial<LeadMeta>) => void;
 }) {
+  const [notes, setNotes] = useState<any[]>([]);
+  const [newNote, setNewNote] = useState("");
+
+  useEffect(() => {
+    async function fetchNotes() {
+      const { data, error } = await supabase
+        .from("lead_notes")
+        .select("*")
+        .eq("lead_id", lead.id)
+        .order("created_at", { ascending: false });
+
+      if (!error) setNotes(data || []);
+    }
+
+    fetchNotes();
+  }, [lead.id]);
+
+  async function addNote() {
+    if (!newNote.trim()) return;
+
+    const { data, error } = await supabase
+      .from("lead_notes")
+      .insert({
+        lead_id: lead.id,
+        note: newNote.trim(),
+      })
+      .select();
+
+    if (!error && data) {
+      setNotes((prev) => [data[0], ...prev]);
+      setNewNote("");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex justify-end" onClick={onClose}>
       <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" />
+
       <motion.aside
         initial={{ x: 80, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
@@ -599,6 +654,7 @@ function LeadDrawer({
         onClick={(e) => e.stopPropagation()}
         className="relative flex h-full w-full max-w-xl flex-col overflow-hidden bg-surface border-l border-border shadow-[0_0_80px_rgba(0,0,0,0.45)]"
       >
+        {/* HEADER */}
         <div className="border-b border-border p-5 md:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -606,24 +662,33 @@ function LeadDrawer({
                 <StatusBadge status={meta.status} />
                 <PriorityBadge priority={meta.priority} />
               </div>
+
               <h2 className="mt-4 text-2xl md:text-3xl text-foreground break-words">
                 {lead.business_name}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">{lead.industry}</p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                {lead.industry}
+              </p>
             </div>
+
             <button
               onClick={onClose}
               className="grid size-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-              aria-label="Close"
             >
               <X size={16} />
             </button>
           </div>
 
+          {/* STATUS + PRIORITY */}
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <ControlPanel label="Status">
-              <StatusSelect value={meta.status} onChange={(status) => onMetaChange({ status })} />
+              <StatusSelect
+                value={meta.status}
+                onChange={(status) => onMetaChange({ status })}
+              />
             </ControlPanel>
+
             <ControlPanel label="Priority">
               <PrioritySelect
                 value={meta.priority}
@@ -633,6 +698,7 @@ function LeadDrawer({
           </div>
         </div>
 
+        {/* BODY */}
         <div className="flex-1 overflow-y-auto p-5 md:p-6">
           <div className="grid gap-3 sm:grid-cols-2">
             <InfoTile Icon={User} label="Contact" value={lead.name} />
@@ -646,25 +712,68 @@ function LeadDrawer({
             <ContactLink Icon={Phone} href={`tel:${lead.phone}`} label="Phone" value={lead.phone} />
           </div>
 
+          {/* MESSAGE */}
           <div className="mt-6 rounded-2xl border border-border bg-background/35 p-5">
-            <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Message</div>
-            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
-              {lead.message?.trim() || <span className="text-muted-foreground">No message provided.</span>}
+            <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+              Message
+            </div>
+
+            <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/90">
+              {lead.message?.trim() || "No message provided."}
             </p>
+          </div>
+
+          {/* NOTES SECTION */}
+          <div className="mt-6 rounded-2xl border border-border bg-background/35 p-5">
+            <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+              Notes
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <input
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Write a note..."
+                className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+
+              <button
+                onClick={addNote}
+                className="rounded-xl bg-accent px-4 py-2 text-sm text-white"
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {notes.map((n) => (
+                <div
+                  key={n.id}
+                  className="rounded-xl border border-border bg-secondary/20 p-3 text-sm"
+                >
+                  {n.note}
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {new Date(n.created_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
+        {/* FOOTER */}
         <div className="border-t border-border p-4 md:p-5">
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
             <a
               href={`mailto:${lead.email}?subject=Re: Your website inquiry`}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-accent text-white px-5 py-3 text-sm font-medium"
             >
-              <Send size={14} /> Reply by email
+              <Send size={14} /> Reply
             </a>
+
             <button
               onClick={onDelete}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-5 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-5 py-3 text-sm text-red-400"
             >
               <Trash2 size={14} /> Delete
             </button>
@@ -872,10 +981,6 @@ function ContactLink({
       </div>
     </a>
   );
-}
-
-function deriveStatus(lead: Lead): LeadStatus {
-  return isWithinDays(lead.created_at, 2) ? "New" : "Contacted";
 }
 
 function derivePriority(lead: Lead): LeadPriority {
