@@ -5,6 +5,7 @@ import type {
   ClientPatch,
   Lead,
   NewClientInput,
+  PaymentStatus,
 } from "../types";
 
 const CLIENTS_TABLE = "clients";
@@ -30,6 +31,39 @@ function normalise(row: Record<string, unknown>): Client {
       "Advance Pending") as Client["project_status"],
     created_at: (row.created_at as string) ?? new Date().toISOString(),
     updated_at: (row.updated_at as string) ?? new Date().toISOString(),
+
+    // Project Details
+    project_name: (row.project_name as string | null) ?? null,
+    project_type: (row.project_type as string | null) ?? null,
+    project_description: (row.project_description as string | null) ?? null,
+    scope_of_work: (row.scope_of_work as string | null) ?? null,
+    timeline: (row.timeline as string | null) ?? null,
+    delivery_date: (row.delivery_date as string | null) ?? null,
+
+    // Business Details
+    owner_name: (row.owner_name as string | null) ?? null,
+    business_address: (row.business_address as string | null) ?? null,
+    gst_number: (row.gst_number as string | null) ?? null,
+    business_website: (row.business_website as string | null) ?? null,
+    business_email: (row.business_email as string | null) ?? null,
+
+    // Billing Details
+    advance_amount:
+      row.advance_amount == null ? null : Number(row.advance_amount),
+    payment_status: ((row.payment_status as PaymentStatus) ??
+      "Not Started") as PaymentStatus,
+
+    // Agreement Details
+    agreement_date: (row.agreement_date as string | null) ?? null,
+    project_start_date: (row.project_start_date as string | null) ?? null,
+    project_end_date: (row.project_end_date as string | null) ?? null,
+    revision_count: Number(row.revision_count ?? 0),
+    terms_notes: (row.terms_notes as string | null) ?? null,
+
+    // Document Contact Details
+    primary_contact_name: (row.primary_contact_name as string | null) ?? null,
+    primary_contact_phone: (row.primary_contact_phone as string | null) ?? null,
+    primary_contact_email: (row.primary_contact_email as string | null) ?? null,
   };
 }
 
@@ -66,7 +100,6 @@ export async function createClient(input: NewClientInput): Promise<Client> {
 }
 
 export async function convertLeadToClient(lead: Lead): Promise<Client> {
-  // Avoid duplicate conversion: if a client already exists for this lead, return it.
   const { data: existing } = await supabase
     .from(CLIENTS_TABLE)
     .select("*")
@@ -102,7 +135,6 @@ export async function updateClient(
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  // CASCADE removes client_notes, fallback explicit cleanup for safety.
   await supabase.from(NOTES_TABLE).delete().eq("client_id", id);
   const { error } = await supabase.from(CLIENTS_TABLE).delete().eq("id", id);
   if (error) throw new Error(error.message);

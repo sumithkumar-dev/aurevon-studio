@@ -84,3 +84,22 @@ export function projectStatusClasses(status: ProjectStatus) {
       return "border-border bg-secondary/40 text-muted-foreground";
   }
 }
+
+export function paymentStatusClasses(
+  status: import("./types").PaymentStatus,
+) {
+  switch (status) {
+    case "Not Started":
+      return "border-border bg-secondary/40 text-muted-foreground";
+    case "Advance Paid":
+      return "border-sky-400/30 bg-sky-400/10 text-sky-200";
+    case "Partially Paid":
+      return "border-amber-400/30 bg-amber-400/10 text-amber-200";
+    case "Fully Paid":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-200";
+    case "Refunded":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-200";
+    default:
+      return "border-border bg-secondary/40 text-muted-foreground";
+  }
+}

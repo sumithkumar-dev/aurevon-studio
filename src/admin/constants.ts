@@ -1,7 +1,9 @@
 import type {
+  DocumentType,
   LeadPriority,
   LeadSource,
   LeadStatus,
+  PaymentStatus,
   ProjectStatus,
 } from "./types";
 
@@ -53,4 +55,19 @@ export const PROJECT_STATUS_OPTIONS: ProjectStatus[] = [
   "Delivered",
   "Closed",
   "Cancelled",
+];
+
+export const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = [
+  "Not Started",
+  "Advance Paid",
+  "Partially Paid",
+  "Fully Paid",
+  "Refunded",
+];
+
+export const DOCUMENT_TYPES: DocumentType[] = [
+  "Proposal",
+  "Agreement",
+  "Invoice",
+  "Handover",
 ];
