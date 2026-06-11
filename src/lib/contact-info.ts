@@ -1,10 +1,10 @@
-// Update these values to your real numbers.
+
 export const CONTACT = {
-  email: "hello@aurevon.studio",
-  phoneDisplay: "+91 90000 00000",
-  phoneTel: "+919000000000",
-  whatsappNumber: "919000000000", // country code + number, no +
+  email: "aurevon.studio@gmail.com",
+  phoneDisplay: "+91 91779 16932",
+  phoneTel: "+919177916932",
+  whatsappNumber: "919177916932",
   whatsappUrl:
-    "https://wa.me/919000000000?text=Hi%20AUREVON%2C%20I%27d%20like%20to%20discuss%20a%20website%20for%20my%20business.",
-  location: "Telangana, India",
+    "https://wa.me/919177916932?text=Hi%2C%20I%27m%20interested%20in%20getting%20a%20website%20for%20my%20business.%20Could%20you%20share%20more%20details%3F",
+  location: "Warangal, Telangana, India",
 };

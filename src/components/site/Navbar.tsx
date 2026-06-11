@@ -91,7 +91,7 @@ export function Navbar() {
         {/* Logo always goes home */}
         <Link
           to="/"
-          aria-label="AUREVON — Home"
+          aria-label="AUREVON - Home"
           className="group flex min-w-0 items-center gap-2"
         >
           <span className="relative flex">
@@ -122,7 +122,12 @@ export function Navbar() {
                   width: hoverRect.width,
                 }}
                 exit={{ opacity: 0 }}
-                transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.6 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 380,
+                  damping: 32,
+                  mass: 0.6,
+                }}
                 className="absolute top-1/2 -translate-y-1/2 h-9 rounded-full bg-secondary/80 pointer-events-none"
                 style={{ left: hoverRect.left, width: hoverRect.width }}
               />
@@ -135,7 +140,12 @@ export function Navbar() {
               layout
               initial={false}
               animate={{ left: activeRect.left, width: activeRect.width }}
-              transition={{ type: "spring", stiffness: 320, damping: 30, mass: 0.7 }}
+              transition={{
+                type: "spring",
+                stiffness: 320,
+                damping: 30,
+                mass: 0.7,
+              }}
               className="absolute -bottom-1 h-[2px] rounded-full bg-accent shadow-[0_0_12px_var(--accent)] pointer-events-none"
               style={{ left: activeRect.left, width: activeRect.width }}
             />
@@ -235,7 +245,7 @@ export function Navbar() {
                           className={`group flex items-center justify-between rounded-xl px-3.5 py-3 text-xl min-[390px]:text-[1.35rem] font-display tracking-wide transition-all duration-300 ${
                             isActive
                               ? "text-accent bg-secondary/60"
-                            : "text-foreground hover:bg-secondary/40"
+                              : "text-foreground hover:bg-secondary/40"
                           }`}
                         >
                           <span className="flex items-center gap-3">

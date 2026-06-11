@@ -27,11 +27,14 @@ export function Footer() {
           <div className="lg:col-span-4">
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-accent" />
-              <span className="font-display text-xl tracking-[0.2em]">AUREVON</span>
+              <span className="font-display text-xl tracking-[0.2em]">
+                AUREVON
+              </span>
             </div>
             <p className="mt-4 text-sm text-muted-foreground max-w-sm leading-relaxed">
-              Premium websites for business owners across Telangana — clinics, cafés, salons, and
-              shops that want customers to trust them the moment they land online.
+              Premium websites for business owners across Telangana - clinics,
+              cafés, salons, and shops that want customers to trust them the
+              moment they land online.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <a
@@ -56,8 +59,9 @@ export function Footer() {
               Serving Telangana
             </h4>
             <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-              Based in Telangana, working with local owners who care about how their business shows
-              up when someone searches on Google, Maps, or Instagram.
+              Based in Telangana, working with local owners who care about how
+              their business shows up when someone searches on Google, Maps, or
+              Instagram.
             </p>
             <div className="flex flex-wrap gap-2">
               {TELANGANA_CITIES.map((city) => (
@@ -87,32 +91,48 @@ export function Footer() {
 
           <div className="lg:col-span-3 grid sm:grid-cols-2 lg:grid-cols-1 gap-8">
             <div>
-              <h4 className="text-sm text-foreground mb-3 font-sans font-medium">Explore</h4>
+              <h4 className="text-sm text-foreground mb-3 font-sans font-medium">
+                Explore
+              </h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <Link to="/services" className="hover:text-foreground transition-colors">
+                  <Link
+                    to="/services"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Services
                   </Link>
                 </li>
                 <li>
-                  <Link to="/portfolio" className="hover:text-foreground transition-colors">
+                  <Link
+                    to="/portfolio"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Portfolio
                   </Link>
                 </li>
                 <li>
-                  <Link to="/process" className="hover:text-foreground transition-colors">
+                  <Link
+                    to="/process"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Process
                   </Link>
                 </li>
                 <li>
-                  <Link to="/contact" className="hover:text-foreground transition-colors">
+                  <Link
+                    to="/contact"
+                    className="hover:text-foreground transition-colors"
+                  >
                     Contact
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm text-foreground mb-3 font-sans font-medium">Contact</h4>
+              <h4 className="text-sm text-foreground mb-3 font-sans font-medium">
+                Contact
+              </h4>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Mail size={14} className="text-accent shrink-0" />
@@ -155,8 +175,8 @@ export function Footer() {
       <div className="border-t border-border">
         <div className="container-aurevon py-6 flex flex-col sm:flex-row justify-between gap-2 text-xs text-muted-foreground">
           <span>
-            © {new Date().getFullYear()} AUREVON Studio. Proudly serving local businesses in
-            Telangana.
+            © {new Date().getFullYear()} AUREVON Studio. Proudly serving local
+            businesses in Telangana.
           </span>
           <span>Hyderabad · Secunderabad · across Telangana</span>
         </div>

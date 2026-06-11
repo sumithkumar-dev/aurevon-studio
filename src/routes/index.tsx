@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   useMeta({
-    title: "AUREVON — Premium Websites for Local Businesses",
+    title: "AUREVON - Premium Websites for Local Businesses",
     description:
       "AUREVON is a web studio designing professional, trustworthy websites for cafes, clinics, gyms and salons across Telangana.",
   });
@@ -42,7 +42,7 @@ function Home() {
               <em className="text-accent not-italic">trust</em> you.
             </h1>
             <p className="mt-5 md:mt-6 text-base md:text-xl text-muted-foreground max-w-xl text-balance leading-relaxed">
-              When someone searches for your clinic, café, or salon — what they find should feel as
+              When someone searches for your clinic, café, or salon - what they find should feel as
               professional as the service you deliver inside. That's what we build.
             </p>
             <div className="mt-7 md:mt-8 flex flex-wrap gap-3">
@@ -82,7 +82,7 @@ function Home() {
             People near you are <em className="text-accent not-italic">already</em> searching.
           </>
         }
-        intro="Every day, someone in Hyderabad or Secunderabad looks for a clinic, café, or salon like yours. What shows up in that moment decides whether they call you — or your competitor."
+        intro="Every day, someone looks for a clinic, café, or salon like yours on Google. What shows up in that moment decides whether they call you - or your competitor."
       >
         <JourneyFlow />
       </Section>
@@ -91,7 +91,7 @@ function Home() {
         className="section-divider"
         eyebrow="Missed opportunities"
         title="Same customer. Two very different outcomes."
-        intro="When your business doesn't show up clearly online, you don't just miss a click — you lose someone who was ready to walk in or book today."
+        intro="When your business doesn't show up clearly online, you don't just miss a click - you lose someone who was ready to walk in or book today."
       >
         <Comparison />
       </Section>
@@ -100,7 +100,7 @@ function Home() {
         className="section-divider"
         eyebrow="What you get"
         title="A website that works as hard as you do."
-        intro="Not a brochure — a tool that handles the moments that turn a curious visitor into a paying customer."
+        intro="Not a brochure - a tool that handles the moments that turn a curious visitor into a paying customer."
       >
         <Benefits />
       </Section>
@@ -109,7 +109,7 @@ function Home() {
         className="section-divider"
         eyebrow="Real examples"
         title="See what this looks like for businesses like yours."
-        intro="Clinics and cafés across Telangana — each built so customers find hours, services, and contact details without picking up the phone first."
+        intro="Clinics and cafés across Telangana - each built so customers find hours, services, and contact details without picking up the phone first."
       >
         <PortfolioGrid variant="preview" />
         <div className="mt-12">
@@ -126,7 +126,7 @@ function Home() {
         className="section-divider"
         eyebrow="How it works"
         title="Simple steps. No surprises."
-        intro="You stay focused on running your business — we handle design, build, and launch with a process you can follow at every stage."
+        intro="You stay focused on running your business - we handle design, build, and launch with a process you can follow at every stage."
       >
         <ProcessTimeline />
       </Section>

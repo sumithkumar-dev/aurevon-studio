@@ -1,6 +1,6 @@
 # AUREVON Studio
 
-A premium marketing website for AUREVON — built with **React 19 + Vite + TanStack Router (SPA)** and **Tailwind CSS v4**. Form submissions are stored in **Supabase**.
+A premium marketing website for AUREVON - built with **React 19 + Vite + TanStack Router (SPA)** and **Tailwind CSS v4**. Form submissions are stored in **Supabase**.
 
 ---
 
@@ -29,7 +29,7 @@ Open http://localhost:5173
    |---|---|
    | `VITE_SUPABASE_URL` | `https://YOUR_PROJECT_REF.supabase.co` |
    | `VITE_SUPABASE_PUBLISHABLE_KEY` | your Supabase `anon` public key |
-5. Deploy. The included `vercel.json` ensures every route (`/services`, `/portfolio`, `/admin`, etc.) falls back to `index.html` — this is what fixes the 404 you were seeing.
+5. Deploy. The included `vercel.json` ensures every route (`/services`, `/portfolio`, `/admin`, etc.) falls back to `index.html` - this is what fixes the 404 you were seeing.
 6. After it goes live, any later push to your main branch redeploys automatically.
 
 > If you ever change env vars in Vercel, you must **redeploy** for them to take effect (Vercel → Deployments → ⋯ → Redeploy).
@@ -39,30 +39,35 @@ Open http://localhost:5173
 ## 3. Connect your Supabase backend
 
 ### 3.1 Create a project
+
 1. Go to https://supabase.com → **New project**.
 2. Copy:
    - **Project URL** → goes into `VITE_SUPABASE_URL`
    - **anon public** key (Project Settings → API) → goes into `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 Paste both into:
+
 - `.env` (local dev)
 - Vercel → Project Settings → Environment Variables (production)
 
 ### 3.2 Create the database table
+
 Open **Supabase Dashboard → SQL Editor → New query**, paste the entire contents of [`supabase/schema.sql`](./supabase/schema.sql), and click **Run**.
 
-This creates one table — `public.contact_submissions` — and sets up:
+This creates one table - `public.contact_submissions` - and sets up:
+
 - Row Level Security (RLS)
 - A policy allowing **anyone** to submit the form (anonymous insert)
 - A policy allowing **logged-in admins** to read and delete submissions
 - An index on `created_at` for fast sorting in the admin dashboard
 
 ### 3.3 Create your admin login
+
 Supabase Dashboard → **Authentication → Users → Add user → Create new user**.
 
 - Email: `you@aurevon.studio` (or any email)
 - Password: pick a strong password
-- ✅ **Auto Confirm User** — important, or you can't log in.
+- ✅ **Auto Confirm User** - important, or you can't log in.
 
 That account is your admin. You can add more later the same way.
 
@@ -74,12 +79,12 @@ That account is your admin. You can add more later the same way.
 
 - Every form submission on `/contact` writes a row to `public.contact_submissions`.
 - View them two ways:
-  1. **Live admin dashboard** at `https://yourdomain.com/admin` — sign in with the Supabase user you created. You get:
+  1. **Live admin dashboard** at `https://yourdomain.com/admin` - sign in with the Supabase user you created. You get:
      - Stats (total / this week / unique businesses)
      - Searchable table of every lead
      - Click a row → detail drawer with Reply / Delete
      - **Export CSV** button
-  2. **Supabase Dashboard → Table Editor → contact_submissions** — raw table view.
+  2. **Supabase Dashboard → Table Editor → contact_submissions** - raw table view.
 
 The `/admin` route is **not linked anywhere** in the public navigation. Bookmark it.
 
@@ -87,7 +92,7 @@ The `/admin` route is **not linked anywhere** in the public navigation. Bookmark
 
 ## 5. Updating contact details
 
-Edit `src/lib/contact-info.ts` — email, phone, WhatsApp number, and location all live there.
+Edit `src/lib/contact-info.ts` - email, phone, WhatsApp number, and location all live there.
 
 ---
 
@@ -108,11 +113,12 @@ vercel.json            ← SPA fallback (fixes the 404 on refresh)
 
 ## What changed vs. the previous build (why your 404 went away)
 
-The previous project used **TanStack Start** (SSR + a serverless Worker bundle). Vercel was returning 404 because that build output didn't match a static Vercel deployment — there was no `index.html` served at every route.
+The previous project used **TanStack Start** (SSR + a serverless Worker bundle). Vercel was returning 404 because that build output didn't match a static Vercel deployment - there was no `index.html` served at every route.
 
 This project is a clean **client-rendered SPA**:
+
 - Single `index.html` entrypoint
 - `vercel.json` rewrites every path to `/index.html` so TanStack Router can take over on the client
-- All form/admin logic uses the Supabase **browser** client + RLS — no server functions, no edge runtime
+- All form/admin logic uses the Supabase **browser** client + RLS - no server functions, no edge runtime
 
 That removes every deployment surface that was breaking on Vercel.
