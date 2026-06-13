@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project Handover — ABC Cafe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ── Reset & base ──────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --navy: #1a2233;
+        --paper: #f7f5f0;
+        --warm: #e8e3da;
+        --gold: #c8963e;
+        --gold-lt: #e8c27a;
+        --ink: #2c3444;
+        --muted: #7a8099;
+
+        --serif: "Playfair Display", Georgia, serif;
+        --sans: "Inter", system-ui, sans-serif;
+
+        --page-w: 210mm;
+        --page-h: 297mm;
+        --pad-x: 14mm;
+        --pad-y: 12mm;
+        --bar: 5px;
+      }
+
+      html,
+      body {
+        background: #d0cfc9;
+        font-family: var(--sans);
+        color: var(--ink);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* ── Page shell ─────────────────────────────────────────────────── */
+      .page {
+        position: relative;
+        width: var(--page-w);
+        min-height: var(--page-h);
+        background: var(--paper);
+        margin: 0 auto 20px;
+        padding: var(--pad-y) var(--pad-x) var(--pad-y)
+          calc(var(--pad-x) + var(--bar) + 8mm);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Gold left bookmark bar */
+      .page::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: var(--bar);
+        background: var(--gold);
+      }
+
+      /* Page footer strip */
+      .page-footer {
+        margin-top: auto;
+        padding-top: 8mm;
+        border-top: 1px solid var(--warm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 9pt;
+        color: var(--muted);
+        font-family: var(--sans);
+        letter-spacing: 0.04em;
+      }
+      .page-footer .agency-name {
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .page-footer .pg {
+        color: var(--gold);
+        font-weight: 600;
+      }
+
+      /* ── Typography ─────────────────────────────────────────────────── */
+      .eyebrow {
+        font-family: var(--sans);
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 3mm;
+      }
+
+      h1.display {
+        font-family: var(--serif);
+        font-size: 40pt;
+        font-weight: 700;
+        color: var(--navy);
+        line-height: 1.12;
+        letter-spacing: -0.01em;
+      }
+
+      h2.section-title {
+        font-family: var(--serif);
+        font-size: 20pt;
+        font-weight: 600;
+        color: var(--navy);
+        line-height: 1.2;
+        margin-bottom: 4mm;
+      }
+
+      h3.sub-title {
+        font-family: var(--sans);
+        font-size: 11pt;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 1.5mm;
+      }
+
+      p,
+      li {
+        font-size: 10.5pt;
+        line-height: 1.65;
+        color: var(--ink);
+      }
+
+      p + p {
+        margin-top: 2.5mm;
+      }
+
+      /* ── Divider ─────────────────────────────────────────────────────── */
+      .divider {
+        border: none;
+        border-top: 1px solid var(--warm);
+        margin: 6mm 0;
+      }
+      .divider-gold {
+        border: none;
+        border-top: 2px solid var(--gold);
+        width: 20mm;
+        margin: 4mm 0 5mm;
+      }
+
+      /* ── Sections ────────────────────────────────────────────────────── */
+      .section {
+        margin-bottom: 7mm;
+      }
+      .section:last-child {
+        margin-bottom: 0;
+      }
+
+      /* ── Two / Three column grids ────────────────────────────────────── */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+      }
+      .three-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 5mm;
+      }
+
+      /* ── Info block (label + value) ──────────────────────────────────── */
+      .info-block {
+        margin-bottom: 3mm;
+      }
+      .info-block .label {
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.5mm;
+      }
+      .info-block .value {
+        font-size: 11pt;
+        font-weight: 500;
+        color: var(--navy);
+      }
+
+      /* ── Understanding panel (navy card) ─────────────────────────────── */
+      .understanding-panel {
+        background: var(--navy);
+        border-radius: 3px;
+        padding: 6mm 7mm;
+        color: #fff;
+      }
+      .understanding-panel .eyebrow {
+        color: var(--gold-lt);
+      }
+      .understanding-panel h2.section-title {
+        color: #fff;
+        margin-bottom: 3mm;
+      }
+      .understanding-panel p {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 10.5pt;
+      }
+
+      /* ── Clause list (em-dash style) ──────────────────────────────────── */
+      .clause-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 2mm;
+      }
+      .clause-list li {
+        font-size: 10.5pt;
+        color: var(--ink);
+        padding-left: 4.5mm;
+        position: relative;
+        margin-bottom: 2mm;
+        line-height: 1.6;
+      }
+      .clause-list li::before {
+        content: "–";
+        position: absolute;
+        left: 0;
+        color: var(--gold);
+      }
+      .clause-list li strong {
+        color: var(--navy);
+        font-weight: 600;
+      }
+
+      /* ── Deliverable / asset card ────────────────────────────────────── */
+      .deliverable-card {
+        background: #fff;
+        border: 1px solid var(--warm);
+        border-top: 3px solid var(--gold);
+        border-radius: 3px;
+        padding: 5mm;
+      }
+      .deliverable-card .icon {
+        font-size: 14pt;
+        margin-bottom: 2mm;
+        display: block;
+      }
+      .deliverable-card ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 2mm;
+      }
+      .deliverable-card ul li {
+        font-size: 10pt;
+        color: var(--muted);
+        padding-left: 3.5mm;
+        position: relative;
+        margin-bottom: 1.5mm;
+      }
+      .deliverable-card ul li::before {
+        content: "–";
+        position: absolute;
+        left: 0;
+        color: var(--gold);
+      }
+
+      /* ── Checklist (completed items) ─────────────────────────────────── */
+      .check-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 2mm;
+      }
+      .check-list li {
+        font-size: 10.5pt;
+        color: var(--ink);
+        padding-left: 6mm;
+        position: relative;
+        margin-bottom: 2.5mm;
+        line-height: 1.6;
+      }
+      .check-list li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        top: 0;
+        color: var(--gold);
+        font-weight: 700;
+        font-size: 10pt;
+      }
+      .check-list li strong {
+        color: var(--navy);
+        font-weight: 600;
+      }
+
+      /* ── Access transfer card ─────────────────────────────────────────── */
+      .access-card {
+        background: #fff;
+        border: 1px solid var(--warm);
+        border-radius: 3px;
+        padding: 4mm 5mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 3mm;
+      }
+      .access-card:last-child {
+        margin-bottom: 0;
+      }
+      .access-card .access-label {
+        font-size: 10.5pt;
+        font-weight: 500;
+        color: var(--navy);
+      }
+      .access-card .access-status {
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--gold);
+        background: rgba(200, 150, 62, 0.12);
+        border-radius: 2px;
+        padding: 1mm 3mm;
+        white-space: nowrap;
+      }
+
+      /* ── Callout note (gold left border) ─────────────────────────────── */
+      .callout-note {
+        margin-top: 4mm;
+        padding: 3mm 4mm;
+        background: rgba(200, 150, 62, 0.05);
+        border-left: 2px solid var(--gold);
+        font-size: 9.5pt;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .callout-note strong {
+        color: var(--navy);
+      }
+
+      /* ── Scope summary bar ────────────────────────────────────────────── */
+      .scope-bar {
+        background: var(--paper);
+        padding: 5mm 6mm;
+        border-radius: 3px;
+        border-left: 3px solid var(--gold);
+        margin-bottom: 5mm;
+      }
+      .scope-bar .three-col {
+        gap: 4mm;
+      }
+
+      /* ── Contact panel ───────────────────────────────────────────────── */
+      .contact-panel {
+        background: var(--navy);
+        border-radius: 3px;
+        padding: 6mm 7mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4mm;
+      }
+      .contact-panel .tagline {
+        font-family: var(--serif);
+        font-size: 15pt;
+        font-weight: 600;
+        color: #fff;
+        line-height: 1.3;
+        max-width: 60%;
+      }
+      .contact-details {
+        flex-shrink: 0;
+        text-align: right;
+      }
+      .contact-details .contact-row {
+        font-size: 10.5pt;
+        color: rgba(255, 255, 255, 0.75);
+        margin-bottom: 1.5mm;
+      }
+      .contact-details .contact-row strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      /* ── Closing message panel ───────────────────────────────────────── */
+      .closing-panel {
+        text-align: center;
+        padding: 8mm 10mm;
+      }
+      .closing-panel h2.section-title {
+        margin-bottom: 3mm;
+      }
+      .closing-panel p {
+        max-width: 130mm;
+        margin: 0 auto;
+        color: var(--muted);
+      }
+
+      /* ── Responsive / print ──────────────────────────────────────────── */
+      @media screen and (max-width: 1024px) {
+        .page {
+          width: 100%;
+          max-width: var(--page-w);
+        }
+      }
+
+      @media screen and (max-width: 768px) {
+        .page {
+          padding: 20px 15px 20px 25px;
+          min-height: auto;
+          margin-bottom: 20px;
+        }
+        .two-col, .three-col {
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+        .contact-panel { flex-direction: column; align-items: flex-start; }
+        .contact-panel .tagline { max-width: 100%; }
+        .contact-details { text-align: left; }
+        .page-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .access-card { flex-direction: column; align-items: flex-start; gap: 2mm; }
+        h1.display { font-size: 32pt; }
+        h2.section-title { font-size: 18pt; }
+      }
+
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      @media print {
+        html, body { background: none; }
+        .page {
+          width: var(--page-w);
+          min-height: var(--page-h);
+          max-width: none;
+          margin: 0;
+          padding: var(--pad-y) var(--pad-x) var(--pad-y)
+            calc(var(--pad-x) + var(--bar) + 8mm);
+          page-break-after: always;
+          break-after: page;
+        }
+        .page:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="page">
+
+      <!-- Project Completion Header -->
+      <div class="section" style="padding-top: 4mm">
+        <div class="eyebrow">Project Handover</div>
+        <h1 class="display">Your Website<br />Is Ready<br />to Launch</h1>
+        <div class="divider-gold"></div>
+        <p style="max-width: 100mm; color: var(--muted); line-height: 1.6;">
+          Prepared by Aurevon Studios for ABC Cafe<br />
+          Website: https://abccafe.com<br />
+          Launch Date: 04-07-2026
+        </p>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Project Summary -->
+      <div class="section">
+        <div class="eyebrow">Section 01</div>
+        <h2 class="section-title">Project Summary</h2>
+        <div class="understanding-panel">
+          <div class="eyebrow">Completion Summary</div>
+          <p>Design and develop a modern, user-friendly website for ABC Cafe to increase local footfall and simplify the customer experience. The project has now been completed and is ready for handover to ABC Cafe.</p>
+        </div>
+
+        <div class="two-col" style="margin-top: 5mm;">
+          <div>
+            <div class="info-block">
+              <div class="label">Project</div>
+              <div class="value">Business website design and development</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Reference</div>
+              <div class="value">AGR-2026-001</div>
+            </div>
+          </div>
+          <div>
+            <div class="info-block">
+              <div class="label">Client</div>
+              <div class="value">ABC Cafe</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Contact</div>
+              <div class="value">Rahul Kumar, Owner</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Website Information -->
+      <div class="section">
+        <div class="eyebrow">Section 02</div>
+        <h2 class="section-title">Website Information</h2>
+        <div class="scope-bar">
+          <div class="three-col">
+            <div class="info-block" style="margin-bottom: 0;">
+              <div class="label">Website URL</div>
+              <div class="value">https://abccafe.com</div>
+            </div>
+            <div class="info-block" style="margin-bottom: 0;">
+              <div class="label">Domain Provider</div>
+              <div class="value">GoDaddy</div>
+            </div>
+            <div class="info-block" style="margin-bottom: 0;">
+              <div class="label">Hosting Provider</div>
+              <div class="value">Hostinger</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Assets Delivered -->
+      <div class="section">
+        <div class="eyebrow">Section 03</div>
+        <h2 class="section-title">Assets Delivered</h2>
+        <p style="margin-bottom: 4mm;">The following assets have been delivered as part of this project:</p>
+
+        <div class="three-col">
+        </div>
+      </div>
+
+      <div class="page-footer">
+        <span><span class="agency-name">Aurevon Studios</span> · Handover Document</span>
+        <span>ABC Cafe — Project Handover</span>
+        <span class="pg">01 / 02</span>
+      </div>
+    </div>
+
+
+    <div class="page">
+
+      <!-- Access Delivered -->
+      <div class="section">
+        <div class="eyebrow">Section 04</div>
+        <h2 class="section-title">Access Delivered</h2>
+        <p style="margin-bottom: 4mm;">Access to the following systems has been transferred to ABC Cafe. Credentials have been shared separately through a secure channel.</p>
+
+        <div class="access-card">
+          <span class="access-label">Domain Access</span>
+          <span class="access-status">Delivered</span>
+        </div>
+        <div class="access-card">
+          <span class="access-label">Hosting Access</span>
+          <span class="access-status">Delivered</span>
+        </div>
+        <div class="access-card">
+          <span class="access-label">Website Admin Access</span>
+          <span class="access-status">Delivered</span>
+        </div>
+        <div class="access-card">
+          <span class="access-label">Analytics Access</span>
+          <span class="access-status">Delivered</span>
+        </div>
+
+        <div class="callout-note">
+          <strong>Security note.</strong> For security reasons, usernames and passwords are not included in this document. All login credentials have been shared with Rahul Kumar directly via a secure channel.
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Support Information -->
+      <div class="section">
+        <div class="eyebrow">Section 05</div>
+        <h2 class="section-title">Support Information</h2>
+        <div class="two-col">
+          <div>
+            <div class="info-block">
+              <div class="label">Support Period</div>
+              <div class="value">7 Days</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Support Window</div>
+              <div class="value">7 Days from 04-07-2026</div>
+            </div>
+          </div>
+          <div>
+            <div class="info-block">
+              <div class="label">Support Contact</div>
+              <div class="value">Sumith Kumar</div>
+            </div>
+            <p style="font-size: 10pt; color: var(--muted); margin-top: 1mm;">
+              sumithkumar.dev@gmail.com<br />
+              +91 9177916932
+            </p>
+          </div>
+        </div>
+        <div class="callout-note">
+          During the support period, the Studio will address minor bug fixes and technical issues related to the delivered website at no additional cost.
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Maintenance Options -->
+      <div class="section">
+        <div class="eyebrow">Section 06</div>
+        <h2 class="section-title">Maintenance Options</h2>
+        <p style="margin-bottom: 4mm;">Beyond the support period, the following ongoing services are available to keep your website running smoothly:</p>
+
+        <div class="deliverable-card">
+          <h3 class="sub-title">Maintenance Plan</h3>
+          <p style="font-size: 10pt; color: var(--muted);">Optional Monthly Updates &amp; Backups</p>
+          <div class="info-block" style="margin-top: 2mm; margin-bottom: 0;">
+            <div class="value">₹2,000 / Monthly</div>
+          </div>
+        </div>
+
+        <ul class="check-list" style="margin-top: 4mm;">
+          <li><strong>Content Updates.</strong> Regular updates to text, images, and offers.</li>
+          <li><strong>Security &amp; Backups.</strong> Routine backups and software updates.</li>
+          <li><strong>Performance Monitoring.</strong> Ongoing checks for speed and uptime.</li>
+        </ul>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Closing Message -->
+      <div class="section closing-panel">
+        <div class="eyebrow">With Thanks</div>
+        <h2 class="section-title">Project Complete</h2>
+        <p>Thank you for choosing Aurevon Studios. We appreciate the opportunity to build your website and look forward to supporting ABC Cafe's future growth.</p>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- Contact Section -->
+      <div class="section">
+        <div class="contact-panel">
+          <div class="tagline">Websites that help local businesses grow</div>
+          <div class="contact-details">
+            <div class="contact-row"><strong>Sumith Kumar</strong></div>
+            <div class="contact-row">sumithkumar.dev@gmail.com</div>
+            <div class="contact-row">+91 9177916932</div>
+            <div class="contact-row">@aurevon.studios</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-footer">
+        <span><span class="agency-name">Aurevon Studios</span> · Handover Document</span>
+        <span>ABC Cafe — Project Handover</span>
+        <span class="pg">02 / 02</span>
+      </div>
+    </div>
+
+  </body>
+</html>

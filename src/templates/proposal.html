@@ -1,0 +1,1001 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Design Proposal — {{client.business_name}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ── Reset & base ──────────────────────────────────────────────── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --navy: #1a2233;
+        --paper: #f7f5f0;
+        --warm: #e8e3da;
+        --gold: #c8963e;
+        --gold-lt: #e8c27a;
+        --ink: #2c3444;
+        --muted: #7a8099;
+
+        --serif: "Playfair Display", Georgia, serif;
+        --sans: "Inter", system-ui, sans-serif;
+
+        --page-w: 210mm;
+        --page-h: 297mm;
+        --pad-x: 14mm;
+        --pad-y: 12mm;
+        --bar: 5px; /* gold left bar width */
+      }
+
+      html,
+      body {
+        background: #d0cfc9;
+        font-family: var(--sans);
+        color: var(--ink);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* ── Page shell ─────────────────────────────────────────────────── */
+      .page {
+        position: relative;
+        width: var(--page-w);
+        min-height: var(--page-h);
+        background: var(--paper);
+        margin: 0 auto 20px;
+        padding: var(--pad-y) var(--pad-x) var(--pad-y)
+          calc(var(--pad-x) + var(--bar) + 8mm);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Gold left bookmark bar */
+      .page::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: var(--bar);
+        background: var(--gold);
+      }
+
+      /* Page footer strip */
+      .page-footer {
+        margin-top: auto;
+        padding-top: 8mm;
+        border-top: 1px solid var(--warm);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 9pt;
+        color: var(--muted);
+        font-family: var(--sans);
+        letter-spacing: 0.04em;
+      }
+      .page-footer .agency-name {
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .page-footer .pg {
+        color: var(--gold);
+        font-weight: 600;
+      }
+
+      /* ── Typography ─────────────────────────────────────────────────── */
+      .eyebrow {
+        font-family: var(--sans);
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 3mm;
+      }
+
+      h1.display {
+        font-family: var(--serif);
+        font-size: 40pt;
+        font-weight: 700;
+        color: var(--navy);
+        line-height: 1.12;
+        letter-spacing: -0.01em;
+      }
+
+      h2.section-title {
+        font-family: var(--serif);
+        font-size: 20pt;
+        font-weight: 600;
+        color: var(--navy);
+        line-height: 1.2;
+        margin-bottom: 4mm;
+      }
+
+      h3.sub-title {
+        font-family: var(--sans);
+        font-size: 11pt;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 1.5mm;
+      }
+
+      p,
+      li {
+        font-size: 10.5pt;
+        line-height: 1.65;
+        color: var(--ink);
+      }
+
+      p + p {
+        margin-top: 2.5mm;
+      }
+
+      /* ── Divider ─────────────────────────────────────────────────────── */
+      .divider {
+        border: none;
+        border-top: 1px solid var(--warm);
+        margin: 6mm 0;
+      }
+      .divider-gold {
+        border: none;
+        border-top: 2px solid var(--gold);
+        width: 20mm;
+        margin: 4mm 0 5mm;
+      }
+
+      /* ── Sections ────────────────────────────────────────────────────── */
+      .section {
+        margin-bottom: 7mm;
+      }
+      .section:last-child {
+        margin-bottom: 0;
+      }
+
+      /* ── Two-column grid ─────────────────────────────────────────────── */
+      .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+      }
+      .three-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 5mm;
+      }
+
+      /* ── Info block (label + value) ──────────────────────────────────── */
+      .info-block {
+        margin-bottom: 3mm;
+      }
+      .info-block .label {
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 0.5mm;
+      }
+      .info-block .value {
+        font-size: 11pt;
+        font-weight: 500;
+        color: var(--navy);
+      }
+
+      /* ── Understanding panel ─────────────────────────────────────────── */
+      .understanding-panel {
+        background: var(--navy);
+        border-radius: 3px;
+        padding: 6mm 7mm;
+        color: #fff;
+      }
+      .understanding-panel .eyebrow {
+        color: var(--gold-lt);
+      }
+      .understanding-panel h2.section-title {
+        color: #fff;
+        margin-bottom: 3mm;
+      }
+      .understanding-panel p {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 10.5pt;
+      }
+      .understanding-panel .goal-pill {
+        display: inline-block;
+        background: rgba(200, 150, 62, 0.2);
+        border: 1px solid rgba(200, 150, 62, 0.5);
+        color: var(--gold-lt);
+        font-size: 9pt;
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        padding: 1.5mm 3.5mm;
+        border-radius: 2px;
+        margin: 1.5mm 1.5mm 0 0;
+      }
+      .goals-row {
+        margin-top: 3mm;
+      }
+
+      /* ── Deliverable card ────────────────────────────────────────────── */
+      .deliverable-card {
+        background: #fff;
+        border: 1px solid var(--warm);
+        border-top: 3px solid var(--gold);
+        border-radius: 3px;
+        padding: 5mm;
+      }
+      .deliverable-card .icon {
+        font-size: 14pt;
+        margin-bottom: 2mm;
+        display: block;
+      }
+      .deliverable-card ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 2mm;
+      }
+      .deliverable-card ul li {
+        font-size: 10pt;
+        color: var(--muted);
+        padding-left: 3.5mm;
+        position: relative;
+        margin-bottom: 1.5mm;
+      }
+      .deliverable-card ul li::before {
+        content: "–";
+        position: absolute;
+        left: 0;
+        color: var(--gold);
+      }
+
+      /* ── Exclusions list ─────────────────────────────────────────────── */
+      .exclusion-list {
+        list-style: none;
+        padding: 0;
+        columns: 2;
+        column-gap: 6mm;
+      }
+      .exclusion-list li {
+        font-size: 10pt;
+        color: var(--muted);
+        padding-left: 4.5mm;
+        position: relative;
+        margin-bottom: 1.5mm;
+        break-inside: avoid;
+      }
+      .exclusion-list li::before {
+        content: "✕";
+        position: absolute;
+        left: 0;
+        font-size: 8pt;
+        color: #b0b4bf;
+        top: 2px;
+      }
+
+      /* ── Process timeline (horizontal) ──────────────────────────────── */
+      .process-track {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+        margin-top: 3mm;
+      }
+      .process-step {
+        flex: 1;
+        position: relative;
+      }
+      .process-step::after {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        right: 0;
+        height: 1px;
+        background: var(--warm);
+      }
+      .process-step:last-child::after {
+        display: none;
+      }
+      .process-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--paper);
+        border: 2px solid var(--gold);
+        margin: 0 auto 2.5mm;
+        position: relative;
+        z-index: 1;
+      }
+      .process-step.active .process-dot {
+        background: var(--gold);
+      }
+      .process-step p {
+        font-size: 8.5pt;
+        text-align: center;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .process-step h3.sub-title {
+        font-size: 9pt;
+        text-align: center;
+        margin-bottom: 1mm;
+      }
+
+      /* ── Timeline table ──────────────────────────────────────────────── */
+      .table-responsive {
+        width: 100%;
+      }
+      .timeline-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+      }
+      .timeline-table thead th {
+        background: var(--navy);
+        color: #fff;
+        padding: 3mm 4mm;
+        text-align: left;
+        font-weight: 500;
+        font-size: 8.5pt;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .timeline-table tbody tr:nth-child(even) td {
+        background: #fff;
+      }
+      .timeline-table tbody tr:nth-child(odd) td {
+        background: var(--paper);
+      }
+      .timeline-table td {
+        padding: 3mm 4mm;
+        color: var(--ink);
+        vertical-align: top;
+      }
+      .timeline-table td:first-child {
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(200, 150, 62, 0.15);
+        color: var(--gold);
+        border-radius: 2px;
+        padding: 0.5mm 2.5mm;
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+
+      /* ── Investment table ────────────────────────────────────────────── */
+      .investment-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10.5pt;
+      }
+      .investment-table thead th {
+        border-bottom: 2px solid var(--gold);
+        padding: 2.5mm 0;
+        text-align: left;
+        font-size: 8.5pt;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .investment-table thead th:last-child {
+        text-align: right;
+      }
+      .investment-table tbody td {
+        padding: 3mm 0;
+        border-bottom: 1px solid var(--warm);
+        vertical-align: top;
+      }
+      .investment-table tbody td:last-child {
+        text-align: right;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .investment-table .row-note {
+        font-size: 9.5pt;
+        color: var(--muted);
+        display: block;
+        margin-top: 0.5mm;
+      }
+      .investment-table tfoot td {
+        padding: 4mm 0 0;
+        font-family: var(--serif);
+        font-size: 14pt;
+        font-weight: 700;
+        color: var(--navy);
+      }
+      .investment-table tfoot td:last-child {
+        text-align: right;
+      }
+      .investment-table tfoot .total-label {
+        font-size: 9pt;
+        font-family: var(--sans);
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        display: block;
+        margin-bottom: 0.5mm;
+      }
+
+      /* ── Payment cards ───────────────────────────────────────────────── */
+      .payment-card {
+        background: #fff;
+        border: 1px solid var(--warm);
+        border-radius: 3px;
+        padding: 5mm 6mm;
+        text-align: center;
+      }
+      .payment-card .phase {
+        font-size: 8.5pt;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        margin-bottom: 1.5mm;
+      }
+      .payment-card .percent {
+        font-family: var(--serif);
+        font-size: 26pt;
+        font-weight: 700;
+        color: var(--navy);
+        line-height: 1;
+      }
+      .payment-card .when {
+        font-size: 9.5pt;
+        color: var(--muted);
+        margin-top: 1.5mm;
+      }
+      .payment-card.highlight {
+        background: var(--navy);
+        border-color: var(--navy);
+      }
+      .payment-card.highlight .phase {
+        color: var(--gold-lt);
+      }
+      .payment-card.highlight .percent {
+        color: #fff;
+      }
+      .payment-card.highlight .when {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      /* ── Next steps ──────────────────────────────────────────────────── */
+      .next-steps-list {
+        list-style: none;
+        padding: 0;
+        counter-reset: steps;
+      }
+      .next-steps-list li {
+        counter-increment: steps;
+        display: flex;
+        align-items: flex-start;
+        gap: 3mm;
+        margin-bottom: 3.5mm;
+        font-size: 10.5pt;
+      }
+      .next-steps-list li::before {
+        content: counter(steps);
+        min-width: 6.5mm;
+        height: 6.5mm;
+        background: var(--gold);
+        color: #fff;
+        font-size: 8.5pt;
+        font-weight: 700;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      /* ── Contact panel ───────────────────────────────────────────────── */
+      .contact-panel {
+        background: var(--navy);
+        border-radius: 3px;
+        padding: 6mm 7mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4mm;
+      }
+      .contact-panel .tagline {
+        font-family: var(--serif);
+        font-size: 15pt;
+        font-weight: 600;
+        color: #fff;
+        line-height: 1.3;
+        max-width: 60%;
+      }
+      .contact-details {
+        flex-shrink: 0;
+        text-align: right;
+      }
+      .contact-details .contact-row {
+        font-size: 10.5pt;
+        color: rgba(255, 255, 255, 0.75);
+        margin-bottom: 1.5mm;
+      }
+      .contact-details .contact-row strong {
+        color: #fff;
+        font-weight: 600;
+      }
+
+      /* ── Print & Screen Media Queries ────────────────────────────────── */
+      @media screen and (max-width: 1024px) {
+        .page {
+          width: 100%;
+          max-width: var(--page-w);
+        }
+      }
+
+      @media screen and (max-width: 768px) {
+        .page {
+          padding: 20px 15px 20px 25px; /* Adjust padding for mobile, retain gold bar gap */
+          min-height: auto;
+          margin-bottom: 20px;
+        }
+        
+        .two-col, .three-col {
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+
+        .process-track {
+          flex-direction: column;
+          gap: 15px;
+        }
+        .process-step {
+          display: flex;
+          align-items: flex-start;
+          text-align: left;
+          gap: 10px;
+        }
+        .process-step::after {
+          display: none;
+        }
+        .process-dot {
+          margin: 0;
+          flex-shrink: 0;
+        }
+        .process-step p, .process-step h3.sub-title {
+          text-align: left;
+        }
+        
+        .exclusion-list {
+          columns: 1;
+        }
+
+        .table-responsive {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .timeline-table, .investment-table {
+          min-width: 500px; /* Forces scroll if too tight */
+        }
+
+        .contact-panel {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+        .contact-panel .tagline {
+          max-width: 100%;
+        }
+        .contact-details {
+          text-align: left;
+        }
+
+        .page-footer {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 10px;
+        }
+        
+        h1.display { font-size: 32pt; }
+        h2.section-title { font-size: 18pt; }
+      }
+
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      @media print {
+        html, body {
+          background: none;
+        }
+        .page {
+          width: var(--page-w);
+          min-height: var(--page-h);
+          max-width: none;
+          margin: 0;
+          padding: var(--pad-y) var(--pad-x) var(--pad-y)
+            calc(var(--pad-x) + var(--bar) + 8mm);
+          page-break-after: always;
+          break-after: page;
+        }
+        .page:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        .table-responsive {
+          overflow-x: visible;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="section" style="padding-top: 4mm">
+        <div class="eyebrow">Web Design Proposal</div>
+        <h1 class="display">A Website<br />Built for<br />{{client.business_name}}</h1>
+        <div class="divider-gold"></div>
+        <p
+          style="
+            max-width: 90mm;
+            color: var(--muted);
+            line-height: 1.6;
+          "
+        >
+          Prepared by {{agency.name}} for {{client.business_name}} · {{client.location}}<br />
+          Proposal ID: {{proposal.id}} · Issued {{proposal.date}} · Valid for {{proposal.validity_days}} days
+        </p>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section">
+        <div class="eyebrow">Client Information</div>
+        <div class="two-col" style="margin-top: 2mm">
+          <div>
+            <div class="info-block">
+              <div class="label">Business Name</div>
+              <div class="value">{{client.business_name}}</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Industry</div>
+              <div class="value">{{client.industry}}</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Primary Contact</div>
+              <div class="value">{{client.contact_name}}{{#if client.contact_title}}, {{client.contact_title}}{{/if}}</div>
+            </div>
+          </div>
+          <div>
+            <div class="info-block">
+              <div class="label">Email</div>
+              <div class="value">{{client.email}}</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Phone</div>
+              <div class="value">{{client.phone}}</div>
+            </div>
+            <div class="info-block">
+              <div class="label">Location</div>
+              <div class="value">{{client.location}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section">
+        <div class="understanding-panel">
+          <div class="eyebrow">Understanding Your Business</div>
+          <h2 class="section-title" style="font-size: 16pt">
+            What we heard from you
+          </h2>
+          <p>
+            {{project.understanding.summary}}
+          </p>
+
+          <div style="margin-top: 4mm; margin-bottom: 1mm">
+            <div class="eyebrow" style="font-size: 8pt">Primary Challenge</div>
+            <p style="color: rgba(255, 255, 255, 0.9);">
+              {{project.understanding.challenge}}
+            </p>
+          </div>
+
+          {{#if project.understanding.goals}}
+          <div style="margin-top: 4mm">
+            <div class="eyebrow" style="font-size: 8pt">
+              Goals for this project
+            </div>
+            <div class="goals-row">
+              {{#each project.understanding.goals}}
+              <span class="goal-pill">{{this}}</span>
+              {{/each}}
+            </div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="page-footer">
+        <span
+          ><span class="agency-name">{{agency.name}}</span> · Confidential</span
+        >
+        <span>{{client.business_name}} — Web Design Proposal</span>
+        <span class="pg">01 / 03</span>
+      </div>
+    </div>
+
+    <div class="page">
+      {{#if scope.deliverables}}
+      <div class="section">
+        <div class="eyebrow">What's Included</div>
+        <h2 class="section-title">Deliverables</h2>
+        
+        <div class="three-col" style="margin-bottom: 5mm; background: var(--paper); padding: 5mm 6mm; border-radius: 3px; border-left: 3px solid var(--gold);">
+          <div class="info-block" style="margin: 0;">
+            <div class="label">Pages Included</div>
+            <div class="value">{{project.pages_count}}</div>
+          </div>
+          <div class="info-block" style="margin: 0;">
+            <div class="label">Revision Rounds</div>
+            <div class="value">{{project.revision_rounds}}</div>
+          </div>
+          <div class="info-block" style="margin: 0;">
+            <div class="label">Support Period</div>
+            <div class="value">{{project.support_days}} Days</div>
+          </div>
+        </div>
+
+        <div class="three-col">
+          {{#each scope.deliverables}}
+          <div class="deliverable-card">
+            <span class="icon">{{this.icon}}</span>
+            <h3 class="sub-title">{{this.title}}</h3>
+            {{#if this.items}}
+            <ul>
+              {{#each this.items}}
+              <li>{{this}}</li>
+              {{/each}}
+            </ul>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      {{#if scope.exclusions}}
+      <div class="section">
+        <div class="eyebrow">Not Covered in This Proposal</div>
+        <h2 class="section-title">Scope Exclusions</h2>
+        <ul class="exclusion-list">
+          {{#each scope.exclusions}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+        <p style="margin-top: 3mm; font-size: 9.5pt; color: var(--muted)">
+          Any items outside this scope can be discussed as a separate
+          engagement. We'll flag anything that may affect the timeline before
+          proceeding.
+        </p>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      {{#if process.steps}}
+      <div class="section">
+        <div class="eyebrow">How We Work</div>
+        <h2 class="section-title">Our Process</h2>
+        <div class="process-track">
+          {{#each process.steps}}
+          <div class="process-step {{#if this.active}}active{{/if}}">
+            <div class="process-dot"></div>
+            <div>
+              <h3 class="sub-title">{{this.title}}</h3>
+              <p>{{this.description}}</p>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      {{#if timeline}}
+      <div class="section">
+        <div class="eyebrow">Estimated Schedule</div>
+        <h2 class="section-title">Timeline</h2>
+        <div class="table-responsive">
+          <table class="timeline-table">
+            <thead>
+              <tr>
+                <th style="width: 28%">Phase</th>
+                <th style="width: 18%">Duration</th>
+                <th style="width: 28%">What Happens</th>
+                <th style="width: 26%">Client Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each timeline}}
+              <tr>
+                <td>{{this.phase}}</td>
+                <td><span class="badge">{{this.duration}}</span></td>
+                <td>{{this.description}}</td>
+                <td>{{this.client_action}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top: 3.5mm; font-size: 9.5pt; color: var(--muted)">
+          Estimated total:
+          <strong style="color: var(--navy)">{{proposal.estimated_total_time}}</strong> from project
+          kick-off, assuming timely content delivery and feedback. Timeline
+          begins upon receipt of signed proposal and deposit.<br><br>
+          <strong style="color: var(--navy)">Project Start Date:</strong> {{project.start_date}} &nbsp;&nbsp;|&nbsp;&nbsp; 
+          <strong style="color: var(--navy)">Estimated Launch Date:</strong> {{project.launch_date}}
+        </p>
+        
+        {{#if project.assumptions}}
+        <div style="margin-top: 5mm">
+          <div class="eyebrow">Project Assumptions</div>
+          <ul style="margin-left: 5mm">
+            {{#each project.assumptions}}
+            <li>{{this}}</li>
+            {{/each}}
+          </ul>
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
+
+      <div class="page-footer">
+        <span
+          ><span class="agency-name">{{agency.name}}</span> · Confidential</span
+        >
+        <span>{{client.business_name}} — Web Design Proposal</span>
+        <span class="pg">02 / 03</span>
+      </div>
+    </div>
+
+    <div class="page">
+      {{#if pricing.items}}
+      <div class="section">
+        <div class="eyebrow">Project Investment</div>
+        <h2 class="section-title">What You'll Invest</h2>
+        <div class="table-responsive">
+          <table class="investment-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th style="text-align: right">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each pricing.items}}
+              <tr>
+                <td>
+                  {{this.name}}
+                  {{#if this.description}}<span class="row-note">{{this.description}}</span>{{/if}}
+                </td>
+                <td>
+                  <span style="font-size: 9.5pt; color: var(--muted)"
+                    >{{this.frequency}}</span
+                  >
+                </td>
+                <td {{#if this.highlight}}style="color: var(--gold); font-weight: 700"{{/if}}>
+                  {{#if this.price}}{{../pricing.currency}} {{this.price}}{{else}}—{{/if}}
+                </td>
+              </tr>
+              {{/each}}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">
+                  <span class="total-label">Total Project Investment</span>
+                  {{pricing.currency}} {{pricing.total}}
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        
+        <div style="margin-top: 4mm; padding: 3mm 4mm; background: rgba(200, 150, 62, 0.05); border-left: 2px solid var(--gold); font-size: 9.5pt; color: var(--muted);">
+          <strong style="color: var(--navy)">Additional Revision Rounds:</strong> {{pricing.currency}}{{pricing.extra_revision_charge}} per round.<br>
+          Hosting, domain registration, domain renewals, email hosting, and
+          third-party software subscriptions are not included unless
+          specifically stated in this proposal.
+        </div>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      {{#if pricing.payments}}
+      <div class="section">
+        <div class="eyebrow">How Payments Work</div>
+        <h2 class="section-title">Payment Structure</h2>
+        <div class="two-col" style="margin-top: 2mm">
+          {{#each pricing.payments}}
+          <div class="payment-card {{#if this.highlight}}highlight{{/if}}">
+            <div class="phase">{{this.phase}}</div>
+            <div class="percent">{{this.percent}}%</div>
+            <div class="when">{{this.when}}</div>
+          </div>
+          {{/each}}
+        </div>
+        <p style="margin-top: 3.5mm; font-size: 9.5pt; color: var(--muted)">
+          Payments accepted via {{pricing.payment_methods}}. Each
+          milestone payment is due within {{pricing.payment_terms_days}} days of the invoice date. Work
+          pauses if a milestone payment is more than {{pricing.late_payment_days}} days overdue.
+        </p>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      {{#if proposal.next_steps}}
+      <div class="section">
+        <div class="eyebrow">How to Get Started</div>
+        <h2 class="section-title">Next Steps</h2>
+        <ul class="next-steps-list">
+          {{#each proposal.next_steps}}
+          <li>
+            <span
+              ><strong style="color: var(--navy)">{{this.title}}</strong><br>
+              {{this.description}}</span
+            >
+          </li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
+
+      <hr class="divider" />
+
+      <div class="section">
+        <div class="eyebrow">Any Questions?</div>
+        <div class="contact-panel">
+          <div class="tagline">
+            We'd love to build something great for {{client.business_name}}.
+          </div>
+          <div class="contact-details">
+            <div class="contact-row"><strong>{{agency.contact.name}}</strong></div>
+            {{#if agency.contact.phone}}<div class="contact-row">{{agency.contact.phone}}</div>{{/if}}
+            {{#if agency.contact.email}}<div class="contact-row">{{agency.contact.email}}</div>{{/if}}
+            {{#if agency.social.instagram}}<div class="contact-row">{{agency.social.instagram}}</div>{{/if}}
+          </div>
+        </div>
+      </div>
+
+      <div class="page-footer">
+        <span
+          ><span class="agency-name">{{agency.name}}</span> · Confidential</span
+        >
+        <span>{{client.business_name}} — Web Design Proposal</span>
+        <span class="pg">03 / 03</span>
+      </div>
+    </div>
+  </body>
+</html>

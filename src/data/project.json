@@ -1,0 +1,218 @@
+{
+  "client": {
+    "name": "Rajesh",
+    "business_name": "ABC Cafe",
+    "contact_name": "Rahul Kumar",
+    "contact_title": "Owner",
+    "industry": "Cafe",
+    "email": "abc@gmail.com",
+    "phone": "+91 9999999999",
+    "location": "Warangal, Telangana"
+  },
+  "agency": {
+    "name": "Aurevon Studios",
+    "tagline": "Websites that help local businesses grow",
+    "website": "https://aurevon-studio.vercel.app/",
+    "contact": {
+      "name": "Sumith Kumar",
+      "title": "Lead Web Designer",
+      "email": "sumithkumar.dev@gmail.com",
+      "phone": "+91 9177916932"
+    },
+    "social": {
+      "instagram": "@aurevon.studios"
+    }
+  },
+  "project": {
+    "understanding": {
+      "summary": "Design and develop a modern, user-friendly website for ABC Cafe to increase local footfall and simplify the customer experience.",
+      "challenge": "The existing website is outdated, difficult to manage, and not optimized for mobile users.",
+      "goals": [
+        "Enable Online Bookings",
+        "Dynamic Menu Display",
+        "Improve Local SEO"
+      ]
+    },
+    "pages_count": 5,
+    "revision_rounds": 2,
+    "support_days": 7,
+    "start_date": "20-06-2026",
+    "launch_date": "04-07-2026",
+    "assumptions": [
+      "Client provides high-resolution logo and branding assets.",
+      "Client provides all professional photography and text content.",
+      "Feedback will be provided within 3 business days of submission."
+    ]
+  },
+  "scope": {
+    "deliverables": [
+      {
+        "icon": "⬡",
+        "title": "Website Design",
+        "items": [
+          "Responsive UI/UX Design",
+          "Modern & Clean Layout",
+          "Mobile & Tablet Optimization"
+        ]
+      },
+      {
+        "icon": "⬡",
+        "title": "Development",
+        "items": [
+          "Functional Contact Form",
+          "Google Maps Integration",
+          "Basic On-Page SEO Setup"
+        ]
+      }
+    ],
+    "exclusions": [
+      "Professional Photography",
+      "Paid Advertising (Google/FB Ads)",
+      "Logo & Brand Identity Design",
+      "Domain Name Registration",
+      "Monthly Hosting Charges"
+    ]
+  },
+  "process": {
+    "steps": [
+      {
+        "title": "Discovery",
+        "description": "Requirements gathering",
+        "active": true
+      },
+      {
+        "title": "Design",
+        "description": "Wireframes and mockups",
+        "active": false
+      },
+      {
+        "title": "Development",
+        "description": "Website build",
+        "active": false
+      },
+      {
+        "title": "Launch",
+        "description": "Deployment & Go live",
+        "active": false
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "phase": "Discovery",
+      "duration": "Days 1-3",
+      "description": "Planning and requirements gathering.",
+      "client_action": "Provide content & branding assets."
+    },
+    {
+      "phase": "Development",
+      "duration": "Days 4-10",
+      "description": "Building the website pages and layout.",
+      "client_action": "Review initial progress."
+    },
+    {
+      "phase": "Launch",
+      "duration": "Days 11-14",
+      "description": "Final testing and server deployment.",
+      "client_action": "Sign off and approve launch."
+    }
+  ],
+  "pricing": {
+    "currency": "₹",
+    "total": "25,000",
+    "extra_revision_charge": "1,000",
+    "payment_methods": "UPI & Bank Transfer",
+    "payment_terms_days": 7,
+    "late_payment_days": 14,
+    "items": [
+      {
+        "name": "Website Design",
+        "description": "Custom UI/UX Design & Wireframing",
+        "frequency": "One-Time",
+        "price": "10,000",
+        "highlight": false
+      },
+      {
+        "name": "Website Development",
+        "description": "Frontend Build & Integration",
+        "frequency": "One-Time",
+        "price": "15,000",
+        "highlight": false
+      },
+      {
+        "name": "Maintenance Plan",
+        "description": "Optional Monthly Updates & Backups",
+        "frequency": "Monthly",
+        "price": "2,000",
+        "highlight": true
+      }
+    ],
+    "payments": [
+      {
+        "phase": "Advance",
+        "percent": 50,
+        "when": "Due upon proposal signing",
+        "highlight": false
+      },
+      {
+        "phase": "Final",
+        "percent": 50,
+        "when": "Due prior to website launch",
+        "highlight": true
+      }
+    ]
+  },
+  "proposal": {
+    "id": "PRO-2026-001",
+    "date": "13 June 2026",
+    "validity_days": 14,
+    "estimated_total_time": "2 Weeks",
+    "next_steps": [
+      {
+        "title": "Review & Approve",
+        "description": "Look over the deliverables, scope, and timeline to ensure everything aligns with your goals."
+      },
+      {
+        "title": "Sign the Agreement",
+        "description": "We will send over a brief digital agreement to formalize our partnership."
+      },
+      {
+        "title": "Submit Advance",
+        "description": "Process the initial 50% deposit to secure your spot in our development schedule."
+      },
+      {
+        "title": "Project Kickoff",
+        "description": "We'll send you an onboarding checklist to collect your text, images, and branding."
+      }
+    ]
+  },
+  "agreement": {
+    "number": "AGR-2026-001",
+    "project_scope": "Business website design and development",
+    "payment_terms": "50% advance before work starts and 50% before launch."
+  },
+  "invoice": {
+  "number": "INV-2026-001",
+  "issue_date": "13 June 2026",
+  "due_date": "20 June 2026",
+  "status": "Pending",
+
+  "notes": "Thank you for choosing Aurevon Studios.",
+
+  "items": [
+    {
+      "description": "50% Advance Payment",
+      "quantity": 1,
+      "rate": 12500,
+      "amount": 12500
+    }
+  ]
+},
+  "handover": {
+    "website_url": "https://abccafe.com",
+    "domain_provider": "GoDaddy",
+    "hosting_provider": "Hostinger",
+    "assets_delivered": "Source Code, Images, Documentation",
+    "support_period": "7 Days"
+  }
+}
