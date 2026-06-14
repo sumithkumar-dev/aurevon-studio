@@ -58,7 +58,7 @@ import {
   type ClientFiltersState,
 } from "./ClientFilters";
 import { ClientsTable } from "./ClientsTable";
-import { ClientDrawer } from "./ClientDrawer";
+import { ClientWorkspace } from "./ClientWorkspace";
 
 type Tab = "leads" | "clients";
 
@@ -581,7 +581,7 @@ export function Dashboard({ email }: { email: string }) {
       )}
 
       {selectedClient && (
-        <ClientDrawer
+        <ClientWorkspace
           client={selectedClient}
           onClose={() => setSelectedClient(null)}
           onDelete={() => setClientToDelete(selectedClient)}
