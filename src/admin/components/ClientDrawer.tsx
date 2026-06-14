@@ -30,7 +30,7 @@ import { fetchClientDocuments } from "../lib/documents";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
-const textareaClass = fieldClass + " min-h-[88px] resize-y";
+const textareaClass = fieldClass + " min-h-[112px] resize-y";
 
 function toNum(v: string): number | null {
   const t = v.trim();
@@ -115,7 +115,7 @@ function NumberField({
         onChange={(e) => setLocal(e.target.value)}
         onBlur={() => onCommit(toNum(local))}
         placeholder={placeholder}
-        className={fieldClass}
+        className={fieldClass + " text-right tabular-nums"}
       />
     </ControlPanel>
   );
@@ -254,12 +254,24 @@ export function ClientDrawer({
         {/* FOOTER */}
         <div className="border-t border-border p-4 md:p-5">
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-            <a
-              href={client.email ? `mailto:${client.email}` : "#"}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
-            >
-              <Mail size={14} /> Email client
-            </a>
+            {client.email ? (
+              <a
+                href={`mailto:${client.email}`}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-medium hover:bg-accent-glow transition-colors"
+              >
+                <Mail size={14} /> Email client
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="No client email on file"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-3 text-sm font-medium opacity-50 cursor-not-allowed"
+              >
+                <Mail size={14} /> Email client
+              </button>
+            )}
             <button
               onClick={onDelete}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-5 py-3 text-sm text-destructive hover:bg-destructive/10"
@@ -284,9 +296,9 @@ function DetailsTab({
 }) {
   return (
     <>
-      {/* Basic info */}
+      {/* ============== CLIENT ============== */}
       <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
-        Basic information
+        Client
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <InfoTile Icon={User} label="Client name" value={client.client_name} />
@@ -302,27 +314,51 @@ function DetailsTab({
         />
         <InfoTile Icon={Tag} label="Source" value={client.source} />
       </div>
-      <div className="mt-3 grid gap-3">
-        {client.email && (
-          <ContactLink
-            Icon={Mail}
-            href={`mailto:${client.email}`}
-            label="Email"
-            value={client.email}
-          />
-        )}
-        {client.phone && (
-          <ContactLink
-            Icon={Phone}
-            href={`tel:${client.phone}`}
-            label="Phone"
-            value={client.phone}
-          />
-        )}
+      {(client.email || client.phone) && (
+        <div className="mt-3 grid gap-3">
+          {client.email && (
+            <ContactLink
+              Icon={Mail}
+              href={`mailto:${client.email}`}
+              label="Email"
+              value={client.email}
+            />
+          )}
+          {client.phone && (
+            <ContactLink
+              Icon={Phone}
+              href={`tel:${client.phone}`}
+              label="Phone"
+              value={client.phone}
+            />
+          )}
+        </div>
+      )}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <TextField
+          label="Primary contact name"
+          value={client.primary_contact_name}
+          onCommit={(v) => onPatch({ primary_contact_name: v })}
+          placeholder="Person to address on documents"
+        />
+        <TextField
+          label="Primary contact phone"
+          value={client.primary_contact_phone}
+          onCommit={(v) => onPatch({ primary_contact_phone: v })}
+          type="tel"
+          placeholder="+91 ..."
+        />
+        <TextField
+          label="Primary contact email"
+          value={client.primary_contact_email}
+          onCommit={(v) => onPatch({ primary_contact_email: v })}
+          type="email"
+          placeholder="contact@business.com"
+        />
       </div>
 
-      {/* Project Details */}
-      <SectionHeader>Project details</SectionHeader>
+      {/* ============== PROJECT ============== */}
+      <SectionHeader>Project</SectionHeader>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <TextField
           label="Project name"
@@ -337,7 +373,75 @@ function DetailsTab({
           placeholder="e.g. Website, Branding"
         />
         <TextField
-          label="Timeline"
+          label="Delivery date"
+          type="date"
+          value={client.delivery_date}
+          onCommit={(v) => onPatch({ delivery_date: v })}
+        />
+      </div>
+
+      {/* ============== UNDERSTANDING ============== */}
+      <SectionHeader>Project Understanding</SectionHeader>
+      <div className="mt-3 grid gap-3">
+        <TextField
+          label="Project description"
+          value={client.project_description}
+          onCommit={(v) => onPatch({ project_description: v })}
+          textarea
+          placeholder="What the client wants to achieve — used as the proposal overview"
+        />
+      </div>
+
+      {/* ============== SCOPE ============== */}
+      <SectionHeader>Scope of Work</SectionHeader>
+      <div className="mt-3 grid gap-3">
+        <TextField
+          label="Scope of work"
+          value={client.scope_of_work}
+          onCommit={(v) => onPatch({ scope_of_work: v })}
+          textarea
+          placeholder="Deliverables, inclusions and exclusions"
+        />
+      </div>
+
+      {/* ============== PROCESS & AGREEMENT ============== */}
+      <SectionHeader>Process &amp; Agreement</SectionHeader>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <TextField
+          label="Agreement date"
+          type="date"
+          value={client.agreement_date}
+          onCommit={(v) => onPatch({ agreement_date: v })}
+        />
+        <ControlPanel label="Revision count">
+          <input
+            type="number"
+            min={0}
+            value={client.revision_count ?? 0}
+            onChange={(e) =>
+              onPatch({
+                revision_count: Math.max(0, Number(e.target.value) || 0),
+              })
+            }
+            className={fieldClass + " text-right tabular-nums"}
+          />
+        </ControlPanel>
+      </div>
+      <div className="mt-3 grid gap-3">
+        <TextField
+          label="Terms / notes"
+          value={client.terms_notes}
+          onCommit={(v) => onPatch({ terms_notes: v })}
+          textarea
+          placeholder="Anything that should appear under terms on the agreement"
+        />
+      </div>
+
+      {/* ============== TIMELINE ============== */}
+      <SectionHeader>Timeline</SectionHeader>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <TextField
+          label="Timeline (summary)"
           value={client.timeline}
           onCommit={(v) => onPatch({ timeline: v })}
           placeholder="e.g. 4 weeks"
@@ -348,25 +452,68 @@ function DetailsTab({
           value={client.delivery_date}
           onCommit={(v) => onPatch({ delivery_date: v })}
         />
-      </div>
-      <div className="mt-3 grid gap-3">
         <TextField
-          label="Project description"
-          value={client.project_description}
-          onCommit={(v) => onPatch({ project_description: v })}
-          textarea
-          placeholder="Short overview shown on the proposal"
+          label="Project start date"
+          type="date"
+          value={client.project_start_date}
+          onCommit={(v) => onPatch({ project_start_date: v })}
         />
         <TextField
-          label="Scope of work"
-          value={client.scope_of_work}
-          onCommit={(v) => onPatch({ scope_of_work: v })}
-          textarea
-          placeholder="Deliverables, inclusions, exclusions"
+          label="Project end date"
+          type="date"
+          value={client.project_end_date}
+          onCommit={(v) => onPatch({ project_end_date: v })}
         />
       </div>
 
-      {/* Business Details */}
+      {/* ============== PRICING ============== */}
+      <SectionHeader>Pricing</SectionHeader>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <NumberField
+          label="Quoted price (₹)"
+          value={client.quoted_price}
+          onCommit={(v) => onPatch({ quoted_price: v })}
+        />
+        <NumberField
+          label="Final price (₹)"
+          value={client.final_price}
+          onCommit={(v) => onPatch({ final_price: v })}
+        />
+        <NumberField
+          label="Advance amount (₹)"
+          value={client.advance_amount}
+          onCommit={(v) => onPatch({ advance_amount: v })}
+        />
+        <NumberField
+          label="Advance paid (₹)"
+          value={client.advance_paid}
+          onCommit={(v) => onPatch({ advance_paid: v ?? 0 })}
+        />
+        <ControlPanel label="Remaining amount (₹)">
+          <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-right text-sm text-accent tabular-nums">
+            {Number.isFinite(remaining)
+              ? `₹${remaining.toLocaleString()}`
+              : "—"}
+          </div>
+        </ControlPanel>
+        <ControlPanel label="Payment status">
+          <select
+            value={client.payment_status}
+            onChange={(e) =>
+              onPatch({ payment_status: e.target.value as PaymentStatus })
+            }
+            className={fieldClass}
+          >
+            {PAYMENT_STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </ControlPanel>
+      </div>
+
+      {/* ============== BUSINESS DETAILS (existing fields, kept) ============== */}
       <SectionHeader>Business details</SectionHeader>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <TextField
@@ -405,120 +552,6 @@ function DetailsTab({
           value={client.business_address}
           onCommit={(v) => onPatch({ business_address: v })}
           textarea
-        />
-      </div>
-
-      {/* Billing Details */}
-      <SectionHeader>Billing details</SectionHeader>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <NumberField
-          label="Quoted price (₹)"
-          value={client.quoted_price}
-          onCommit={(v) => onPatch({ quoted_price: v })}
-        />
-        <NumberField
-          label="Final price (₹)"
-          value={client.final_price}
-          onCommit={(v) => onPatch({ final_price: v })}
-        />
-        <NumberField
-          label="Advance amount (₹)"
-          value={client.advance_amount}
-          onCommit={(v) => onPatch({ advance_amount: v })}
-        />
-        <NumberField
-          label="Advance paid (₹)"
-          value={client.advance_paid}
-          onCommit={(v) => onPatch({ advance_paid: v ?? 0 })}
-        />
-        <ControlPanel label="Remaining amount (₹)">
-          <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-sm text-accent">
-            {Number.isFinite(remaining)
-              ? `₹${remaining.toLocaleString()}`
-              : "—"}
-          </div>
-        </ControlPanel>
-        <ControlPanel label="Payment status">
-          <select
-            value={client.payment_status}
-            onChange={(e) =>
-              onPatch({ payment_status: e.target.value as PaymentStatus })
-            }
-            className={fieldClass}
-          >
-            {PAYMENT_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </ControlPanel>
-      </div>
-
-      {/* Agreement Details */}
-      <SectionHeader>Agreement details</SectionHeader>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <TextField
-          label="Agreement date"
-          type="date"
-          value={client.agreement_date}
-          onCommit={(v) => onPatch({ agreement_date: v })}
-        />
-        <ControlPanel label="Revision count">
-          <input
-            type="number"
-            min={0}
-            value={client.revision_count ?? 0}
-            onChange={(e) =>
-              onPatch({
-                revision_count: Math.max(0, Number(e.target.value) || 0),
-              })
-            }
-            className={fieldClass}
-          />
-        </ControlPanel>
-        <TextField
-          label="Project start date"
-          type="date"
-          value={client.project_start_date}
-          onCommit={(v) => onPatch({ project_start_date: v })}
-        />
-        <TextField
-          label="Project end date"
-          type="date"
-          value={client.project_end_date}
-          onCommit={(v) => onPatch({ project_end_date: v })}
-        />
-      </div>
-      <div className="mt-3 grid gap-3">
-        <TextField
-          label="Terms / notes"
-          value={client.terms_notes}
-          onCommit={(v) => onPatch({ terms_notes: v })}
-          textarea
-          placeholder="Anything that should appear under terms on the agreement"
-        />
-      </div>
-
-      {/* Document Contact Details */}
-      <SectionHeader>Document contact details</SectionHeader>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <TextField
-          label="Primary contact name"
-          value={client.primary_contact_name}
-          onCommit={(v) => onPatch({ primary_contact_name: v })}
-        />
-        <TextField
-          label="Primary contact phone"
-          value={client.primary_contact_phone}
-          onCommit={(v) => onPatch({ primary_contact_phone: v })}
-          type="tel"
-        />
-        <TextField
-          label="Primary contact email"
-          value={client.primary_contact_email}
-          onCommit={(v) => onPatch({ primary_contact_email: v })}
-          type="email"
         />
       </div>
 
