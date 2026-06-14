@@ -1,5 +1,4 @@
-# CLIENT
-
+#CLIENT
 client.name
 client.business_name
 client.industry
@@ -9,99 +8,79 @@ client.email
 client.phone
 client.location
 
----
+#AGENCY
+agency.name
+agency.tagline
+agency.website
+agency.contact.name
+agency.contact.title
+agency.contact.email
+agency.contact.phone
+agency.social.instagram
 
-# PROPOSAL
-
-proposal.id
-proposal.date
-proposal.validity_days
-proposal.estimated_total_time
-
----
-
-# UNDERSTANDING
+#PROJECT
+project.project_name
+project.website_type
+project.pages_count
+project.revision_rounds
+project.support_days
+project.start_date
+project.launch_date
 
 project.understanding.summary
 project.understanding.challenge
 project.understanding.goals[]
 
----
-
-# DELIVERABLES
-
-scope.deliverables[].title
-scope.deliverables[].items[]
-
-scope.exclusions[]
-
----
-
-# PROCESS
-
-process.steps[].title
-process.steps[].description
-
----
-
-# TIMELINE
-
-timeline[].phase
-timeline[].duration
-timeline[].description
-timeline[].client_action
-
----
-
-#ASSUMPTIONS
-
 project.assumptions[]
 
-# PRICING
+#PROPOSAL
+proposal.id
+proposal.date
+proposal.validity_days
+proposal.estimated_total_time
+proposal.next_steps[]
 
+#SCOPE
+scope.deliverables[]
+scope.exclusions[]
+
+#PROCESS
+process.steps[]
+
+#TIMELINE
+timeline[]
+
+#PRICING
 pricing.currency
 pricing.total
+pricing.extra_revision_charge
+pricing.maintenance_monthly
 
-pricing.items[].name
-pricing.items[].description
-pricing.items[].frequency
-pricing.items[].price
-
-pricing.payments[].phase
-pricing.payments[].percent
-pricing.payments[].when
+pricing.items[]
+pricing.payments[]
 
 pricing.payment_methods
 pricing.payment_terms_days
 pricing.late_payment_days
 
----
-
-# AGREEMENT
-
-agreement.agreement_number
-agreement.project_fee
-agreement.payment_terms
+#AGREEMENT
+agreement.number
 agreement.project_scope
-project.start_date
-project.launch_date
+agreement.payment_terms
 
----
-
-# INVOICE
-
-invoice.invoice_number
+#INVOICE
+invoice.number
 invoice.issue_date
 invoice.due_date
-invoice.amount
-invoice.description
+invoice.status
+invoice.notes
+invoice.items[]
 
----
-
-# HANDOVER
-
+#HANDOVER
 handover.website_url
 handover.domain_provider
 handover.hosting_provider
-handover.assets_delivered
+handover.assets_delivered[]
+handover.access_delivered[]
 handover.support_period
+handover.support_end_date

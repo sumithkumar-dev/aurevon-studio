@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Aurevon Project Schema",
+  "type": "object",
+
+  "required": [
+    "client",
+    "agency",
+    "project",
+    "pricing"
+  ],
+
+  "properties": {
+
+    "client": {
+      "type": "object",
+      "required": [
+        "name",
+        "business_name",
+        "contact_name",
+        "email",
+        "phone"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "business_name": { "type": "string" },
+        "industry": { "type": "string" },
+        "contact_name": { "type": "string" },
+        "contact_title": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "location": { "type": "string" }
+      }
+    },
+
+    "agency": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "website": { "type": "string" }
+      }
+    },
+
+    "project": {
+      "type": "object",
+      "properties": {
+        "project_name": { "type": "string" },
+        "website_type": { "type": "string" },
+        "pages_count": { "type": "number" },
+        "revision_rounds": { "type": "number" },
+        "support_days": { "type": "number" },
+        "start_date": { "type": "string" },
+        "launch_date": { "type": "string" }
+      }
+    },
+
+    "pricing": {
+      "type": "object",
+      "properties": {
+        "currency": { "type": "string" },
+        "total": { "type": "string" },
+        "extra_revision_charge": { "type": "string" },
+        "maintenance_monthly": { "type": "string" }
+      }
+    }
+  }
+}
