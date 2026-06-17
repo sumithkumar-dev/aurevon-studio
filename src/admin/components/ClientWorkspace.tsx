@@ -8,7 +8,9 @@ import {
   CheckCircle2,
   CircleDollarSign,
   ClipboardList,
+  Download,
   FileText,
+  Globe,
   ListChecks,
   Loader2,
   Mail,
@@ -24,10 +26,12 @@ import type {
   Client,
   ClientDocument,
   ClientPatch,
+  DocumentType,
   PaymentStatus,
   ProjectStatus,
 } from "../types";
 import {
+  PAYMENT_METHOD_OPTIONS,
   PAYMENT_STATUS_OPTIONS,
   PROJECT_STATUS_OPTIONS,
 } from "../constants";
@@ -38,14 +42,22 @@ import {
   toDateInputValue,
 } from "../utils";
 import { ClientNotesSection } from "./ClientNotesSection";
-import { fetchClientDocuments } from "../lib/documents";
+import { fetchClientDocuments, upsertDocument } from "../lib/documents";
+import { generateAndPrint, getMissingFields } from "../lib/proposal";
 import {
-  emptyWorkspace,
+  applyWorkspaceDefaults,
+  autoPricingItems,
+  defaultMilestones,
+  defaultTimelinePhases,
   newMilestone,
   newPricingItem,
   newTimelineEntry,
   parseWorkspace,
   serializeWorkspace,
+  suggestClientAction,
+  suggestGoalsForIndustry,
+  SUGGESTED_DELIVERABLES,
+  SUGGESTED_EXCLUSIONS,
   type WorkspaceMilestone,
   type WorkspacePayload,
   type WorkspacePricingItem,
@@ -228,7 +240,7 @@ function SelectInput<T extends string>({
 }
 
 /* ------------------------------------------------------------------ */
-/* List editor (Goals / Deliverables / Exclusions)                     */
+/* List editor (Goals)                                                 */
 /* ------------------------------------------------------------------ */
 
 function ListEditor({
@@ -310,6 +322,133 @@ function ListEditor({
   );
 }
 
+/* Checkbox list editor (Deliverables / Exclusions)                    */
+/* Shows pre-suggested items as checkboxes. Checked items are added   */
+/* to the active list. Custom items can still be typed in.            */
+/* ------------------------------------------------------------------ */
+
+function CheckboxListEditor({
+  items,
+  onChange,
+  suggestions,
+  placeholder,
+  addLabel,
+}: {
+  items: string[];
+  onChange: (next: string[]) => void;
+  suggestions: string[];
+  placeholder: string;
+  addLabel: string;
+}) {
+  const [draft, setDraft] = useState("");
+
+  function isChecked(suggestion: string) {
+    return items.includes(suggestion);
+  }
+
+  function toggle(suggestion: string) {
+    if (isChecked(suggestion)) {
+      onChange(items.filter((i) => i !== suggestion));
+    } else {
+      onChange([...items, suggestion]);
+    }
+  }
+
+  function addCustom() {
+    const v = draft.trim();
+    if (!v || items.includes(v)) return;
+    onChange([...items, v]);
+    setDraft("");
+  }
+
+  // Items that are NOT in the suggestions list (custom entries)
+  const customItems = items.filter((item) => !suggestions.includes(item));
+
+  return (
+    <div className="space-y-4">
+      {/* Suggestions as checkboxes */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Suggested — tick to include
+        </p>
+        <ul className="space-y-1.5">
+          {suggestions.map((s) => (
+            <li key={s}>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/40 px-3 py-2.5 hover:bg-secondary/40 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isChecked(s)}
+                  onChange={() => toggle(s)}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[hsl(var(--accent))] rounded"
+                />
+                <span className="text-sm text-foreground leading-snug">{s}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Custom items added by user (not in suggestions) */}
+      {customItems.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Custom
+          </p>
+          <ul className="space-y-2">
+            {customItems.map((item) => (
+              <li
+                key={item}
+                className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border bg-background/40 px-3 py-2"
+              >
+                <input
+                  value={item}
+                  onChange={(e) => {
+                    const next = items.map((i) => (i === item ? e.target.value : i));
+                    onChange(next);
+                  }}
+                  className="min-w-0 bg-transparent text-sm text-foreground outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => onChange(items.filter((i) => i !== item))}
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label="Remove"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Add custom item */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addCustom();
+            }
+          }}
+          placeholder={placeholder}
+          className={inputClass}
+        />
+        <button
+          type="button"
+          onClick={addCustom}
+          disabled={!draft.trim()}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-glow transition-colors disabled:opacity-50"
+        >
+          <Plus size={14} /> {addLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Tabs                                                                */
 /* ------------------------------------------------------------------ */
@@ -354,11 +493,30 @@ export function ClientWorkspace({
 
   // Local workspace payload parsed from terms_notes. Edits are buffered and
   // committed onBlur / on explicit changes via patchWorkspace().
-  const [workspace, setWorkspace] = useState<WorkspacePayload>(() =>
-    parseWorkspace(client.terms_notes),
-  );
+  const [workspace, setWorkspace] = useState<WorkspacePayload>(() => {
+    const parsed = parseWorkspace(client.terms_notes);
+    return applyWorkspaceDefaults(parsed, {
+      message: (client as unknown as Record<string, unknown>).lead_message as string | null,
+      project_description: client.project_description,
+      industry: client.industry,
+      website_type: parsed.website_type,
+      pages_count: parsed.pages_count,
+      support_days: parsed.support_days,
+      total_price: parsed.total_price ?? client.final_price,
+    });
+  });
   useEffect(() => {
-    setWorkspace(parseWorkspace(client.terms_notes));
+    const parsed = parseWorkspace(client.terms_notes);
+    const withDefaults = applyWorkspaceDefaults(parsed, {
+      message: (client as unknown as Record<string, unknown>).lead_message as string | null,
+      project_description: client.project_description,
+      industry: client.industry,
+      website_type: parsed.website_type,
+      pages_count: parsed.pages_count,
+      support_days: parsed.support_days,
+      total_price: parsed.total_price ?? client.final_price,
+    });
+    setWorkspace(withDefaults);
   }, [client.id, client.terms_notes]);
   // Save status indicator (Saving / Saved / Error) for edits made in this workspace.
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -377,11 +535,51 @@ export function ClientWorkspace({
     }
   }
 
+  function derivePaymentStatus(
+    milestones: typeof workspace.milestones,
+    totalPrice: number | null,
+  ): import("../types").PaymentStatus {
+    if (!milestones.length) return "Not Started";
+    const paidTotal = milestones.filter((m) => m.paid).reduce((s, m) => s + m.amount, 0);
+    if (paidTotal === 0) return "Not Started";
+    const total = totalPrice ?? milestones.reduce((s, m) => s + m.amount, 0);
+    if (total > 0 && paidTotal >= total) return "Fully Paid";
+    if (milestones[0]?.paid && !milestones.slice(1).some((m) => m.paid)) return "Advance Paid";
+    return "Partially Paid";
+  }
+
   function patchWorkspace(partial: Partial<WorkspacePayload>) {
     const next = { ...workspace, ...partial };
     setWorkspace(next);
-    handlePatch({ terms_notes: serializeWorkspace(next) });
+    if ("milestones" in partial || "total_price" in partial || "pricing_items" in partial) {
+      const derived = derivePaymentStatus(next.milestones, next.total_price);
+      const paidTotal = next.milestones.filter((m) => m.paid).reduce((s, m) => s + m.amount, 0);
+      const total = next.total_price
+        ?? next.milestones.reduce((s, m) => s + m.amount, 0)
+        ?? next.pricing_items.reduce((s, it) => s + it.amount, 0);
+      const remaining = Math.max(0, total - paidTotal);
+      handlePatch({
+        terms_notes: serializeWorkspace(next),
+        payment_status: derived,
+        advance_paid: paidTotal,
+        remaining_amount: remaining,
+        final_price: total,
+      });
+    } else {
+      handlePatch({ terms_notes: serializeWorkspace(next) });
+    }
   }
+
+  // Auto-save defaults the first time the workspace is opened with an empty
+  // terms_notes (so next open doesn't re-generate and overwrite user edits).
+  useEffect(() => {
+    if (!client.terms_notes || !client.terms_notes.trim().startsWith("{")) {
+      // Persist the generated defaults so they're stored and editable
+      handlePatch({ terms_notes: serializeWorkspace(workspace) });
+    }
+    // Only run on mount / client change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client.id]);
 
   // Pricing totals.
   const itemsSubtotal = useMemo(
@@ -539,7 +737,26 @@ export function ClientWorkspace({
             />
           )}
           {tab === "documents" && (
-            <DocumentsTab docs={docs} loading={docsLoading} />
+            <DocumentsTab
+              docs={docs}
+              loading={docsLoading}
+              client={client}
+              workspace={workspace}
+              onPatch={handlePatch}
+              onDocGenerated={(updated) => {
+                setDocs((prev) => {
+                  if (!prev) return [updated];
+                  // Match on both doc_type and invoice_subtype for split invoices
+                  const idx = prev.findIndex(
+                    (d) =>
+                      d.doc_type === updated.doc_type &&
+                      (d.invoice_subtype ?? null) === (updated.invoice_subtype ?? null),
+                  );
+                  if (idx === -1) return [...prev, updated];
+                  return prev.map((d, i) => (i === idx ? updated : d));
+                });
+              }}
+            />
           )}
           {tab === "notes" && (
             <SectionCard
@@ -610,12 +827,12 @@ function ClientTab({
             placeholder="Founder, Marketing Lead..."
           />
         </Field>
-        <Field label="Email">
+        <Field label="Document contact email" hint="Used on proposals, agreements, and invoices.">
           <TextInput
             type="email"
             value={client.primary_contact_email ?? client.email}
             onCommit={(v) =>
-              onPatch({ primary_contact_email: v, email: v ?? client.email })
+              onPatch({ primary_contact_email: v })
             }
           />
         </Field>
@@ -664,7 +881,7 @@ function BusinessTab({
             onCommit={(v) => onPatch({ owner_name: v })}
           />
         </Field>
-        <Field label="Business email">
+        <Field label="Business email" hint="Internal record only — not shown on generated documents.">
           <TextInput
             type="email"
             value={client.business_email}
@@ -714,6 +931,12 @@ function ProjectTab({
   onPatch: (patch: ClientPatch) => void | Promise<void>;
   onPatchWorkspace: (partial: Partial<WorkspacePayload>) => void;
 }) {
+  // Derive a non-empty summary to always show something meaningful
+  const effectiveSummary =
+    workspace.summary ||
+    client.project_description ||
+    "A professional website project tailored to the client's business goals and target audience.";
+
   return (
     <>
       <SectionCard
@@ -788,12 +1011,16 @@ function ProjectTab({
         Icon={ClipboardList}
       >
         <div className="space-y-4">
-          <Field label="Summary">
+          <Field
+            label="Summary"
+            hint="Auto-filled from client message or project description. Edit to customise."
+          >
             <TextArea
-              value={workspace.summary ?? client.project_description}
+              value={effectiveSummary}
               onCommit={(v) => {
-                onPatchWorkspace({ summary: v });
-                onPatch({ project_description: v });
+                const val = v || effectiveSummary;
+                onPatchWorkspace({ summary: val });
+                onPatch({ project_description: val });
               }}
               placeholder="Short summary of the engagement..."
             />
@@ -810,8 +1037,22 @@ function ProjectTab({
 
       <SectionCard
         title="Goals"
-        description="Outcomes the project must achieve."
+        description="Outcomes the project must achieve. Auto-suggested based on industry — edit freely."
         Icon={CheckCircle2}
+        actions={
+          <button
+            type="button"
+            onClick={() =>
+              onPatchWorkspace({
+                goals: suggestGoalsForIndustry(client.industry),
+              })
+            }
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            title="Re-generate suggestions from industry"
+          >
+            Re-suggest
+          </button>
+        }
       >
         <ListEditor
           items={workspace.goals}
@@ -819,6 +1060,29 @@ function ProjectTab({
           placeholder="e.g. Launch a credible online presence"
           addLabel="Add goal"
         />
+      </SectionCard>
+
+      <SectionCard
+        title="Handover information"
+        description="Domain and hosting details used in the project handover document."
+        Icon={Globe}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Domain provider">
+            <TextInput
+              value={workspace.domain_provider}
+              onCommit={(v) => onPatchWorkspace({ domain_provider: v })}
+              placeholder="GoDaddy, Namecheap, Cloudflare..."
+            />
+          </Field>
+          <Field label="Hosting provider">
+            <TextInput
+              value={workspace.hosting_provider}
+              onCommit={(v) => onPatchWorkspace({ hosting_provider: v })}
+              placeholder="Hostinger, Vercel, Netlify..."
+            />
+          </Field>
+        </div>
       </SectionCard>
     </>
   );
@@ -839,27 +1103,29 @@ function ScopeTab({
     <>
       <SectionCard
         title="Deliverables"
-        description="Tangible items included in this engagement."
+        description="Tick items included in this engagement. Add custom ones below."
         Icon={ListChecks}
       >
-        <ListEditor
+        <CheckboxListEditor
           items={workspace.deliverables}
           onChange={(deliverables) => onPatchWorkspace({ deliverables })}
-          placeholder="e.g. Responsive 6-page website"
-          addLabel="Add deliverable"
+          suggestions={SUGGESTED_DELIVERABLES}
+          placeholder="e.g. Multilingual support"
+          addLabel="Add custom"
         />
       </SectionCard>
 
       <SectionCard
         title="Exclusions"
-        description="Out-of-scope items to set clear expectations."
+        description="Tick items that are out of scope to set clear expectations."
         Icon={X}
       >
-        <ListEditor
+        <CheckboxListEditor
           items={workspace.exclusions}
           onChange={(exclusions) => onPatchWorkspace({ exclusions })}
-          placeholder="e.g. Copywriting in regional languages"
-          addLabel="Add exclusion"
+          suggestions={SUGGESTED_EXCLUSIONS}
+          placeholder="e.g. Custom animations"
+          addLabel="Add custom"
         />
       </SectionCard>
     </>
@@ -892,26 +1158,49 @@ function TimelineTab({
   return (
     <SectionCard
       title="Timeline"
-      description="Phases, milestones and target dates."
+      description="Phases, milestones and target dates. Edit dates only — structure is pre-built."
       Icon={CalendarClock}
       actions={
-        <button
-          type="button"
-          onClick={() =>
-            onPatchWorkspace({
-              timeline: [...workspace.timeline, newTimelineEntry()],
-            })
-          }
-          className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
-        >
-          <Plus size={13} /> Add phase
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              onPatchWorkspace({ timeline: defaultTimelinePhases() });
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            Reset phases
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              onPatchWorkspace({
+                timeline: [...workspace.timeline, newTimelineEntry()],
+              })
+            }
+            className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+          >
+            <Plus size={13} /> Add phase
+          </button>
+        </div>
       }
     >
       {workspace.timeline.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No phases yet. Add the first phase to start building the timeline.
-        </p>
+        <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-center">
+          <p className="mb-3 text-sm text-muted-foreground">
+            No phases yet. The default Discovery → Design → Development → Launch
+            structure will be added automatically on next open.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              onPatchWorkspace({ timeline: defaultTimelinePhases() });
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+          >
+            <Plus size={14} /> Add default phases
+          </button>
+        </div>
       ) : (
         <ul className="space-y-3">
           {workspace.timeline.map((entry, idx) => (
@@ -962,8 +1251,11 @@ function TimelineTab({
                   />
                 </Field>
               </div>
-              <div className="mt-3">
-                <Field label="Notes">
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <Field
+                  label="What Happens"
+                  hint="Brief description of the Studio's work in this phase."
+                >
                   <textarea
                     value={entry.notes ?? ""}
                     onChange={(e) =>
@@ -971,6 +1263,20 @@ function TimelineTab({
                     }
                     rows={2}
                     placeholder="Optional context for this phase."
+                    className={textareaClass}
+                  />
+                </Field>
+                <Field
+                  label="Client Action"
+                  hint="What the client needs to do or provide during this phase."
+                >
+                  <textarea
+                    value={entry.client_action ?? ""}
+                    onChange={(e) =>
+                      update(entry.id, { client_action: e.target.value || null })
+                    }
+                    rows={2}
+                    placeholder={suggestClientAction(entry.phase)}
                     className={textareaClass}
                   />
                 </Field>
@@ -1025,6 +1331,8 @@ function PricingTab({
     });
   }
 
+  const totalPrice = workspace.total_price ?? client.final_price ?? 0;
+
   return (
     <>
       <SectionCard title="Pricing" Icon={CircleDollarSign}>
@@ -1042,6 +1350,20 @@ function PricingTab({
               onCommit={(v) => {
                 onPatchWorkspace({ total_price: v });
                 onPatch({ final_price: v });
+                // Auto-recalculate milestones if they were auto-generated (50/50)
+                if (workspace.milestones.length === 2) {
+                  const price = v ?? 0;
+                  const advance = Math.round(price * 0.5);
+                  const final = price - advance;
+                  onPatchWorkspace({
+                    total_price: v,
+                    milestones: workspace.milestones.map((m, i) =>
+                      i === 0
+                        ? { ...m, amount: advance }
+                        : { ...m, amount: final },
+                    ),
+                  });
+                }
               }}
             />
           </Field>
@@ -1087,23 +1409,60 @@ function PricingTab({
 
       <SectionCard
         title="Pricing items"
+        description="Auto-generated from project type and pages. Edit amounts and labels freely."
         Icon={Tag}
         actions={
-          <button
-            type="button"
-            onClick={() =>
-              onPatchWorkspace({
-                pricing_items: [...workspace.pricing_items, newPricingItem()],
-              })
-            }
-            className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
-          >
-            <Plus size={13} /> Add item
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onPatchWorkspace({
+                  pricing_items: autoPricingItems(
+                    workspace.website_type,
+                    workspace.pages_count,
+                    workspace.support_days,
+                  ),
+                });
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              Re-generate
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onPatchWorkspace({
+                  pricing_items: [...workspace.pricing_items, newPricingItem()],
+                })
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+            >
+              <Plus size={13} /> Add item
+            </button>
+          </div>
         }
       >
         {workspace.pricing_items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No line items yet.</p>
+          <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-center">
+            <p className="mb-3 text-sm text-muted-foreground">
+              No line items yet. Auto-generate from project type and pages count.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                onPatchWorkspace({
+                  pricing_items: autoPricingItems(
+                    workspace.website_type,
+                    workspace.pages_count,
+                    workspace.support_days,
+                  ),
+                });
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+            >
+              <Plus size={14} /> Auto-generate items
+            </button>
+          </div>
         ) : (
           <ul className="space-y-2">
             {workspace.pricing_items.map((it) => (
@@ -1151,73 +1510,142 @@ function PricingTab({
 
       <SectionCard
         title="Payment milestones"
+        description="Auto-created as 50% advance + 50% final. Amounts recalculate with total price."
         Icon={CheckCircle2}
         actions={
-          <button
-            type="button"
-            onClick={() =>
-              onPatchWorkspace({
-                milestones: [...workspace.milestones, newMilestone()],
-              })
-            }
-            className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
-          >
-            <Plus size={13} /> Add milestone
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onPatchWorkspace({
+                  milestones: defaultMilestones(totalPrice),
+                })
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              Reset 50/50
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onPatchWorkspace({
+                  milestones: [...workspace.milestones, newMilestone()],
+                })
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+            >
+              <Plus size={13} /> Add milestone
+            </button>
+          </div>
         }
       >
         {workspace.milestones.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Break the total into milestones to track collection.
-          </p>
+          <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-center">
+            <p className="mb-3 text-sm text-muted-foreground">
+              No milestones yet. Auto-create a 50% advance + 50% final split.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                onPatchWorkspace({
+                  milestones: defaultMilestones(totalPrice),
+                })
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
+            >
+              <Plus size={14} /> Auto-create milestones
+            </button>
+          </div>
         ) : (
           <ul className="space-y-2">
             {workspace.milestones.map((m) => (
               <li
                 key={m.id}
-                className="grid grid-cols-[auto_minmax(0,1fr)_minmax(120px,150px)_minmax(120px,150px)_auto] items-center gap-2 rounded-xl border border-border bg-background/40 px-3 py-2"
+                className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 px-3 py-2"
               >
-                <label className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-background hover:border-accent/60">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(120px,150px)_minmax(120px,150px)_auto] items-center gap-2">
+                  <label className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-background hover:border-accent/60">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(m.paid)}
+                      onChange={(e) =>
+                        updateMilestone(
+                          m.id,
+                          e.target.checked
+                            ? { paid: true }
+                            : { paid: false, paid_via: null },
+                        )
+                      }
+                      className="size-3.5 accent-[color:var(--accent)]"
+                      aria-label="Mark milestone as paid"
+                    />
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={Boolean(m.paid)}
-                    onChange={(e) => updateMilestone(m.id, { paid: e.target.checked })}
-                    className="size-3.5 accent-[color:var(--accent)]"
-                    aria-label="Mark milestone as paid"
+                    value={m.label}
+                    onChange={(e) => updateMilestone(m.id, { label: e.target.value })}
+                    placeholder="Milestone label (e.g. 50% on kickoff)"
+                    className="min-w-0 bg-transparent text-sm text-foreground outline-none"
                   />
-                </label>
-                <input
-                  value={m.label}
-                  onChange={(e) => updateMilestone(m.id, { label: e.target.value })}
-                  placeholder="Milestone label (e.g. 50% on kickoff)"
-                  className="min-w-0 bg-transparent text-sm text-foreground outline-none"
-                />
-                <input
-                  type="date"
-                  value={toDateInputValue(m.due ?? null)}
-                  onChange={(e) => updateMilestone(m.id, { due: e.target.value || null })}
-                  className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent/60"
-                />
-                <input
-                  inputMode="decimal"
-                  value={m.amount}
-                  onChange={(e) =>
-                    updateMilestone(m.id, { amount: Number(e.target.value) || 0 })
-                  }
-                  className="rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm text-foreground outline-none focus:border-accent/60"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    onPatchWorkspace({
-                      milestones: workspace.milestones.filter((x) => x.id !== m.id),
-                    })
-                  }
-                  className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  aria-label="Remove milestone"
-                >
-                  <Trash2 size={14} />
-                </button>
+                  <input
+                    type="date"
+                    value={toDateInputValue(m.due ?? null)}
+                    onChange={(e) => updateMilestone(m.id, { due: e.target.value || null })}
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent/60"
+                  />
+                  <input
+                    inputMode="decimal"
+                    value={m.amount}
+                    onChange={(e) =>
+                      updateMilestone(m.id, { amount: Number(e.target.value) || 0 })
+                    }
+                    className="rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm text-foreground outline-none focus:border-accent/60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onPatchWorkspace({
+                        milestones: workspace.milestones.filter((x) => x.id !== m.id),
+                      })
+                    }
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Remove milestone"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+
+                {m.paid ? (
+                  <div className="flex flex-wrap items-center gap-2 pl-10">
+                    <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      Paid via
+                    </span>
+                    <select
+                      value={m.paid_via ?? ""}
+                      onChange={(e) =>
+                        updateMilestone(m.id, { paid_via: e.target.value || null })
+                      }
+                      className={
+                        "rounded-md border bg-background px-2 py-1 text-sm text-foreground outline-none " +
+                        (m.paid_via ? "border-border" : "border-accent/60")
+                      }
+                    >
+                      <option value="" disabled>
+                        Select payment method…
+                      </option>
+                      {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                    {!m.paid_via ? (
+                      <span className="text-[11px] text-accent">
+                        Pick how the client paid — this is what shows on the invoice
+                        instead of "How to Pay".
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </li>
             ))}
             <li className="flex items-center justify-end gap-3 pt-1 text-sm">
@@ -1238,65 +1666,217 @@ function PricingTab({
 function DocumentsTab({
   docs,
   loading,
+  client,
+  workspace,
+  onDocGenerated,
+  onPatch,
 }: {
   docs: ClientDocument[] | null;
   loading: boolean;
+  client: Client;
+  workspace: WorkspacePayload;
+  onDocGenerated: (updated: ClientDocument) => void;
+  onPatch: (patch: import("../types").ClientPatch) => void;
 }) {
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [genErrors, setGenErrors] = useState<Partial<Record<string, string>>>({});
+
+  // Warning dialog state
+  const [warn, setWarn] = useState<{
+    docType: DocumentType;
+    missing: string[];
+    invoiceType: "advance" | "final" | "unified";
+  } | null>(null);
+
+  function handleGenerateClick(docType: DocumentType, invoiceType: "advance" | "final" | "unified" = "advance") {
+    const missing = getMissingFields(docType, client, workspace);
+    if (missing.length > 0) {
+      setWarn({ docType, missing, invoiceType });
+    } else {
+      void doGenerate(docType, invoiceType);
+    }
+  }
+
+  async function doGenerate(docType: DocumentType, invoiceType: "advance" | "final" | "unified" = "advance") {
+    setWarn(null);
+    const cardKey = docType === "Invoice" ? `${docType}-${invoiceType}` : docType;
+    setGenerating(cardKey);
+    setGenErrors((prev) => ({ ...prev, [cardKey]: undefined }));
+    try {
+      const existingDocs = docs ?? [];
+      generateAndPrint(docType, client, workspace, existingDocs, invoiceType);
+      const generatedAt = new Date().toISOString();
+
+      // Side-effect: stamp agreement_date on the client when first generating the Agreement
+      if (docType === "Agreement" && !client.agreement_date) {
+        onPatch({ agreement_date: new Date().toISOString().slice(0, 10) });
+      }
+      // Build metadata with stable ID so it persists for future generations
+      const prefix = docType === "Proposal" ? "PRO"
+        : docType === "Agreement" ? "AGR"
+        : docType === "Invoice"   ? "INV"
+        : "HND";
+      const existingMeta = existingDocs.find((d) => d.doc_type === docType)?.metadata ?? {};
+      const idKey = `${prefix.toLowerCase()}_id`;
+      const stableDocId = typeof existingMeta[idKey] === "string"
+        ? existingMeta[idKey] as string
+        : `${prefix}-${new Date().getFullYear()}-${client.id.replace(/-/g, "").slice(-6).toUpperCase()}`;
+      const metadata = { ...existingMeta, [idKey]: stableDocId };
+      const updated = await upsertDocument(client.id, docType, generatedAt, metadata, invoiceType !== "unified" ? invoiceType : undefined);
+      onDocGenerated(updated);
+    } catch (err) {
+      setGenErrors((prev) => ({
+        ...prev,
+        [cardKey]: err instanceof Error ? err.message : "Generation failed.",
+      }));
+    } finally {
+      setGenerating(null);
+    }
+  }
+
   return (
-    <SectionCard
-      title="Documents"
-      description="Generated artefacts for this engagement."
-      Icon={FileText}
-    >
-      {loading || docs == null ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 size={14} className="animate-spin" /> Loading documents...
-        </div>
-      ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {docs.map((doc) => {
-            const generated = doc.status === "Generated";
-            return (
-              <li
-                key={doc.id}
-                className="rounded-2xl border border-border bg-background/40 p-4"
+    <>
+      {/* ── Missing-fields warning dialog ───────────────────────────────── */}
+      {warn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-background p-6 shadow-xl">
+            <div className="mb-1 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-amber-400" />
+              <span className="text-sm font-semibold text-foreground">
+                Missing fields — {warn.docType}
+              </span>
+            </div>
+            <p className="mb-3 text-[12px] text-muted-foreground">
+              The following fields are empty. The PDF will have blank spots for
+              them. Do you still want to generate?
+            </p>
+            <ul className="mb-4 space-y-1">
+              {warn.missing.map((m) => (
+                <li
+                  key={m}
+                  className="flex items-center gap-2 text-[12px] text-amber-300"
+                >
+                  <span className="size-1.5 shrink-0 rounded-full bg-amber-400" />
+                  {m}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setWarn(null)}
+                className="flex-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-secondary/40 transition-colors"
               >
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-foreground">
-                      {doc.doc_type}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-muted-foreground">
-                      {generated && doc.generated_at
-                        ? `Generated ${formatDateTime(doc.generated_at)}`
-                        : "Not generated yet"}
-                    </div>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                      generated
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                        : "border-border bg-secondary/40 text-muted-foreground"
-                    }`}
-                  >
-                    {doc.status}
-                  </span>
-                </div>
-                {doc.file_url ? (
-                  <a
-                    href={doc.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
-                  >
-                    Open file →
-                  </a>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+                Go back and fill them
+              </button>
+              <button
+                type="button"
+                onClick={() => void doGenerate(warn.docType, warn.invoiceType)}
+                className="flex-1 rounded-xl bg-amber-500/20 border border-amber-500/30 px-3 py-2 text-xs font-medium text-amber-200 hover:bg-amber-500/30 transition-colors"
+              >
+                Generate anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </SectionCard>
+
+      <SectionCard
+        title="Documents"
+        description="Generated artefacts for this engagement."
+        Icon={FileText}
+      >
+        {loading || docs == null ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin" /> Loading documents...
+          </div>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {docs.map((doc) => {
+              const generated = doc.status === "Generated";
+              const cardKey = doc.doc_type === "Invoice" && doc.invoice_subtype
+                ? `${doc.doc_type}-${doc.invoice_subtype}`
+                : doc.doc_type;
+              const isGenerating = generating === cardKey;
+              const error = genErrors[cardKey as DocumentType];
+              const missingCount = getMissingFields(doc.doc_type, client, workspace).length;
+              const displayLabel = doc.doc_type === "Invoice" && doc.invoice_subtype
+                ? `Invoice (${doc.invoice_subtype.charAt(0).toUpperCase() + doc.invoice_subtype.slice(1)})`
+                : doc.doc_type;
+              return (
+                <li
+                  key={doc.id}
+                  className="rounded-2xl border border-border bg-background/40 p-4"
+                >
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-foreground">
+                        {displayLabel}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {generated && doc.generated_at
+                          ? `Generated ${formatDateTime(doc.generated_at)}`
+                          : "Not generated yet"}
+                      </div>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                        generated
+                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                          : "border-border bg-secondary/40 text-muted-foreground"
+                      }`}
+                    >
+                      {doc.status}
+                    </span>
+                  </div>
+
+                  {/* Incomplete fields hint */}
+                  {missingCount > 0 && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-400/80">
+                      <AlertTriangle size={11} />
+                      {missingCount} field{missingCount > 1 ? "s" : ""} missing
+                    </p>
+                  )}
+
+                  {doc.file_url ? (
+                    <a
+                      href={doc.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
+                    >
+                      Open file →
+                    </a>
+                  ) : null}
+
+                  <div className="mt-3">
+                    {error && (
+                      <p className="mb-2 text-[11px] text-destructive">{error}</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleGenerateClick(
+                          doc.doc_type,
+                          (doc.invoice_subtype as "advance" | "final") ?? "advance",
+                        )
+                      }
+                      disabled={generating !== null}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-60"
+                    >
+                      {isGenerating ? (
+                        <><Loader2 size={12} className="animate-spin" /> Opening PDF…</>
+                      ) : (
+                        <><Download size={12} />{generated ? "Re-generate PDF" : "Generate PDF"}</>
+                      )}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SectionCard>
+    </>
   );
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Invoice — ABC Cafe · INV-2026-001</title>
+    <title>{{client.business_name_slug}}_Invoice_{{invoice.id}}_{{invoice.date_iso}}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -53,7 +53,7 @@
       .page {
         position: relative;
         width: var(--page-w);
-        min-height: var(--page-h);
+        height: var(--page-h);
         background: var(--paper);
         margin: 0 auto 20px;
         padding: var(--pad-y) var(--pad-x) var(--pad-y)
@@ -482,6 +482,7 @@
       @media screen and (max-width: 768px) {
         .page {
           padding: 20px 15px 20px 25px;
+          height: auto;
           min-height: auto;
           width: 100%;
           margin-bottom: 20px;
@@ -545,13 +546,14 @@
         }
         .page {
           width: var(--page-w);
-          min-height: var(--page-h);
+          height: var(--page-h);
           max-width: none;
           margin: 0;
           padding: var(--pad-y) var(--pad-x) var(--pad-y)
             calc(var(--pad-x) + var(--bar) + 8mm);
           page-break-after: always;
           break-after: page;
+          overflow: hidden;
         }
         .page:last-child {
           page-break-after: avoid;
@@ -573,9 +575,9 @@
         <h1 class="display">Payment<br />Due</h1>
         <div class="divider-gold"></div>
         <p style="max-width: 90mm; color: var(--muted); line-height: 1.6;">
-          Issued by Aurevon Studios for ABC Cafe<br />
-          Invoice No: INV-2026-001 &nbsp;·&nbsp; Date: 13 June 2026<br />
-          In reference to Proposal: PRO-2026-001
+          Issued by {{agency.name}} for {{client.business_name}}<br />
+          Invoice No: {{invoice.id}} &nbsp;·&nbsp; Date: {{invoice.date}}<br />
+          In reference to Proposal: {{invoice.proposal_id}}
         </p>
       </div>
 
@@ -587,20 +589,20 @@
           <div class="four-col">
             <div class="info-block" style="margin: 0;">
               <div class="label">Invoice No.</div>
-              <div class="value">INV-2026-001</div>
+              <div class="value">{{invoice.id}}</div>
             </div>
             <div class="info-block" style="margin: 0;">
               <div class="label">Issue Date</div>
-              <div class="value">13 June 2026</div>
+              <div class="value">{{invoice.date}}</div>
             </div>
             <div class="info-block" style="margin: 0;">
               <div class="label">Due Date</div>
-              <div class="value">20 June 2026</div>
+              <div class="value">{{invoice.due_date}}</div>
             </div>
             <div class="info-block" style="margin: 0;">
               <div class="label">Status</div>
               <div class="value">
-                <span class="status-badge status-pending">Pending</span>
+                <span class="status-badge status-{{invoice.status_class}}">{{invoice.status_label}}</span>
               </div>
             </div>
           </div>
@@ -617,13 +619,13 @@
           <div class="party-block">
             <div class="info-block" style="margin-bottom: 2mm;">
               <div class="label">From</div>
-              <div class="value">Aurevon Studios</div>
+              <div class="value">{{agency.name}}</div>
             </div>
             <p style="font-size: 10pt; color: var(--muted); line-height: 1.7;">
-              Sumith Kumar, Lead Web Designer<br />
-              sumithkumar.dev@gmail.com<br />
-              +91 9177916932<br />
-              @aurevon.studios
+              {{agency.contact.name}}, {{agency.title}}<br />
+              {{agency.contact.email}}<br />
+              {{agency.contact.phone}}<br />
+              {{agency.social.instagram}}
             </p>
           </div>
 
@@ -638,13 +640,13 @@
           <div class="party-block">
             <div class="info-block" style="margin-bottom: 2mm;">
               <div class="label">Bill To</div>
-              <div class="value">ABC Cafe</div>
+              <div class="value">{{client.business_name}}</div>
             </div>
             <p style="font-size: 10pt; color: var(--muted); line-height: 1.7;">
-              Rahul Kumar, Owner<br />
-              abc@gmail.com<br />
-              +91 9999999999<br />
-              Warangal, Telangana
+              {{client.contact_name}}<br />
+              {{client.email}}<br />
+              {{client.phone}}<br />
+              {{client.location}}
             </p>
           </div>
         </div>
@@ -667,12 +669,14 @@
             </tr>
           </thead>
           <tbody>
+            {{#each invoice.items}}
             <tr>
-              <td>50% Advance Payment</td>
+              <td>{{this.name}}</td>
               <td class="center">1</td>
-              <td class="right">12,500</td>
-              <td class="right">12,500</td>
+              <td class="right">{{../invoice.currency}} {{this.price}}</td>
+              <td class="right">{{../invoice.currency}} {{this.price}}</td>
             </tr>
+            {{/each}}
           </tbody>
         </table>
 
@@ -680,7 +684,7 @@
         <div class="summary-block">
           <div class="summary-row">
             <span class="s-label">Subtotal</span>
-            <span class="s-value">₹12,500</span>
+            <span class="s-value">{{invoice.currency}} {{invoice.subtotal}}</span>
           </div>
           <div class="summary-row">
             <span class="s-label">Tax / GST</span>
@@ -688,15 +692,15 @@
           </div>
           <div class="summary-total-row">
             <span class="s-label">Total Due</span>
-            <span class="s-value">₹12,500</span>
+            <span class="s-value">{{invoice.currency}} {{invoice.total}}</span>
           </div>
         </div>
       </div>
 
       <div class="page-footer">
-        <span><span class="agency-name">Aurevon Studios</span> · Confidential</span>
-        <span>ABC Cafe — Invoice INV-2026-001</span>
-        <span class="pg">01 / 02</span>
+        <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
+        <span>{{client.business_name}} — Invoice {{invoice.id}}</span>
+        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
       </div>
     </div>
 
@@ -707,6 +711,33 @@
     <div class="page">
 
       <!-- Payment Information -->
+      {{#if invoice.is_paid}}
+      <div class="section" style="padding-top: 4mm;">
+        <div class="eyebrow">Payment Information</div>
+        <h2 class="section-title">Payment Received</h2>
+
+        <div class="scope-bar">
+          <div class="two-col" style="gap: 6mm;">
+            <div>
+              <div class="info-block" style="margin: 0 0 3mm;">
+                <div class="label">Status</div>
+                <div class="value" style="font-size: 10.5pt; margin-top: 2mm;">Paid in full</div>
+              </div>
+            </div>
+            <div>
+              <div class="info-block" style="margin: 0;">
+                <div class="label">Method</div>
+                <div class="value">{{#if invoice.paid_via}}{{invoice.paid_via}}{{else}}Confirmed by Studio{{/if}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout-note">
+          <strong>Thank you.</strong> This invoice has been paid in full{{#if invoice.paid_via}} via {{invoice.paid_via}}{{/if}}. No further action is required from you — we'll keep this on file for our records.
+        </div>
+      </div>
+      {{else}}
       <div class="section" style="padding-top: 4mm;">
         <div class="eyebrow">Payment Information</div>
         <h2 class="section-title">How to Pay</h2>
@@ -735,23 +766,26 @@
 
         <ul class="clause-list" style="margin-top: 3mm;">
           <li>
-            <strong>Advance Payment.</strong> This invoice covers the <strong>50% advance</strong> due upon proposal signing. Work commences only after this payment is received and confirmed.
+            <strong>{{invoice.context_heading}}.</strong> {{invoice.context_text}}
           </li>
           <li>
-            <strong>Due date.</strong> Payment must be received by <strong>20 June 2026</strong>. Late payments may delay the project start date.
+            <strong>Due date.</strong> Payment must be received by <strong>{{invoice.due_date}}</strong>. Late payments may delay the project start date.
           </li>
           <li>
             <strong>Late payments.</strong> Invoices unpaid after <strong>14 days</strong> from the due date will incur a late fee. The Studio reserves the right to pause scheduling until the outstanding balance is settled.
           </li>
+          {{#if invoice.is_advance}}
           <li>
-            <strong>Final payment.</strong> The remaining 50% balance (₹12,500) will be invoiced separately prior to website launch.
+            <strong>Final payment.</strong> The remaining balance ({{invoice.currency}} {{invoice.remaining}}) will be invoiced separately prior to website launch.
           </li>
+          {{/if}}
         </ul>
 
         <div class="callout-note">
           <strong>Payment confirmation.</strong> Please share a screenshot or UTR reference after completing the transfer so we can confirm receipt and schedule your project kickoff promptly.
         </div>
       </div>
+      {{/if}}
 
       <hr class="divider" />
 
@@ -761,28 +795,28 @@
         <h2 class="section-title" style="margin-bottom: 3mm;">Invoice Notes</h2>
 
         <div class="notes-box">
-          Thank you for choosing Aurevon Studios. We look forward to building something great together for ABC Cafe. If you have any questions about this invoice, please reach out before the due date and we will be happy to assist.
+          Thank you for choosing {{agency.name}}. We look forward to building something great together for {{client.business_name}}. If you have any questions about this invoice, please reach out before the due date and we will be happy to assist.
         </div>
 
         <div class="two-col" style="margin-top: 5mm;">
           <div>
             <div class="info-block">
               <div class="label">Project Reference</div>
-              <div class="value" style="font-size: 10.5pt;">Website Design &amp; Development</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.project_name}}</div>
             </div>
             <div class="info-block">
               <div class="label">Proposal ID</div>
-              <div class="value" style="font-size: 10.5pt;">PRO-2026-001</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.proposal_id}}</div>
             </div>
           </div>
           <div>
             <div class="info-block">
               <div class="label">Agreement Ref</div>
-              <div class="value" style="font-size: 10.5pt;">AGR-2026-001</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.agreement_id}}</div>
             </div>
             <div class="info-block">
               <div class="label">Project Start</div>
-              <div class="value" style="font-size: 10.5pt;">20 June 2026</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.start_date}}</div>
             </div>
           </div>
         </div>
@@ -795,20 +829,32 @@
         <div class="contact-panel">
           <div class="tagline">Questions about this invoice? We're here.</div>
           <div class="contact-details">
-            <div class="contact-row"><strong>Sumith Kumar</strong></div>
-            <div class="contact-row">+91 9177916932</div>
-            <div class="contact-row">sumithkumar.dev@gmail.com</div>
-            <div class="contact-row">@aurevon.studios</div>
+            <div class="contact-row"><strong>{{agency.contact.name}}</strong></div>
+            <div class="contact-row">{{agency.contact.phone}}</div>
+            <div class="contact-row">{{agency.contact.email}}</div>
+            <div class="contact-row">{{agency.social.instagram}}</div>
           </div>
         </div>
       </div>
 
       <div class="page-footer">
-        <span><span class="agency-name">Aurevon Studios</span> · Confidential</span>
-        <span>ABC Cafe — Invoice INV-2026-001</span>
-        <span class="pg">02 / 02</span>
+        <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
+        <span>{{client.business_name}} — Invoice {{invoice.id}}</span>
+        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
       </div>
     </div>
 
   </body>
+  <script>
+    (function () {
+      var pages = document.querySelectorAll(".page");
+      var total = pages.length;
+      pages.forEach(function (page, idx) {
+        var nums = page.querySelectorAll(".pg-num");
+        var tots = page.querySelectorAll(".pg-tot");
+        nums.forEach(function (el) { el.textContent = String(idx + 1).padStart(2, "0"); });
+        tots.forEach(function (el) { el.textContent = String(total).padStart(2, "0"); });
+      });
+    })();
+  </script>
 </html>

@@ -55,6 +55,7 @@ function TextField({
   placeholder,
   type = "text",
   textarea = false,
+  hint,
 }: {
   label: string;
   value: string | null | undefined;
@@ -62,6 +63,7 @@ function TextField({
   placeholder?: string;
   type?: "text" | "email" | "url" | "tel" | "date";
   textarea?: boolean;
+  hint?: string;
 }) {
   const initial = type === "date" ? toDateInputValue(value ?? null) : value ?? "";
   const [local, setLocal] = useState<string>(initial);
@@ -69,7 +71,7 @@ function TextField({
     setLocal(initial);
   }, [initial]);
   return (
-    <ControlPanel label={label}>
+    <ControlPanel label={label} hint={hint}>
       {textarea ? (
         <textarea
           value={local}
@@ -320,8 +322,9 @@ function DetailsTab({
             <ContactLink
               Icon={Mail}
               href={`mailto:${client.email}`}
-              label="Email"
+              label="Lead Email"
               value={client.email}
+              hint="Captured when this lead first came in"
             />
           )}
           {client.phone && (
@@ -349,11 +352,12 @@ function DetailsTab({
           placeholder="+91 ..."
         />
         <TextField
-          label="Primary contact email"
+          label="Document contact email"
           value={client.primary_contact_email}
           onCommit={(v) => onPatch({ primary_contact_email: v })}
           type="email"
           placeholder="contact@business.com"
+          hint="Shown on proposals, invoices, and other generated documents"
         />
       </div>
 
@@ -544,6 +548,7 @@ function DetailsTab({
           value={client.business_email}
           onCommit={(v) => onPatch({ business_email: v })}
           type="email"
+          hint="Internal record only — not shown on generated documents"
         />
       </div>
       <div className="mt-3 grid gap-3">

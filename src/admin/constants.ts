@@ -65,6 +65,13 @@ export const PAYMENT_STATUS_OPTIONS: PaymentStatus[] = [
   "Refunded",
 ];
 
+export const PAYMENT_METHOD_OPTIONS: string[] = [
+  "UPI",
+  "Bank Transfer",
+  "Cash",
+  "Other",
+];
+
 export const DOCUMENT_TYPES: DocumentType[] = [
   "Proposal",
   "Agreement",

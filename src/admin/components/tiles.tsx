@@ -1,8 +1,10 @@
 export function ControlPanel({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -11,6 +13,11 @@ export function ControlPanel({
         {label}
       </span>
       {children}
+      {hint && (
+        <span className="mt-1.5 block text-[11px] leading-snug text-muted-foreground/80">
+          {hint}
+        </span>
+      )}
     </label>
   );
 }
@@ -40,11 +47,13 @@ export function ContactLink({
   href,
   label,
   value,
+  hint,
 }: {
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   href: string;
   label: string;
   value: string;
+  hint?: string;
 }) {
   return (
     <a
@@ -59,6 +68,11 @@ export function ContactLink({
           {label}
         </div>
         <div className="mt-1 truncate text-sm">{value}</div>
+        {hint && (
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground/80">
+            {hint}
+          </div>
+        )}
       </div>
     </a>
   );

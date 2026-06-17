@@ -1,11 +1,11 @@
 export const agency = {
   name: "Aurevon Studios",
-  owner_name: "Sumith",
+  owner_name: "Sumith Kumar",
   title: "Founder & Web Designer",
 
   contact: {
-    phone: "+91 00000 00000",
-    email: "hello@aurevon.com",
+    phone: "+91 91779 16932",
+    email: "sumithkumar.dev@gmail.com",
     location: "Warangal, India",
   },
 

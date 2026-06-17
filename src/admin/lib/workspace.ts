@@ -9,12 +9,16 @@ export type WorkspaceTimelineEntry = {
   start?: string | null;
   end?: string | null;
   notes?: string | null;
+  client_action?: string | null;
 };
 
 export type WorkspacePricingItem = {
   id: string;
   label: string;
   amount: number;
+  description?: string | null;
+  frequency?: string | null;
+  highlight?: boolean;
 };
 
 export type WorkspaceMilestone = {
@@ -23,6 +27,9 @@ export type WorkspaceMilestone = {
   due?: string | null;
   amount: number;
   paid?: boolean;
+  /** How the client paid this milestone (e.g. "UPI", "Bank Transfer"). Only
+   * meaningful when `paid` is true; cleared automatically when unpaid. */
+  paid_via?: string | null;
 };
 
 export type WorkspacePayload = {
@@ -43,6 +50,8 @@ export type WorkspacePayload = {
   total_price: number | null;
   extra_revision_charge: number | null;
   monthly_maintenance_fee: number | null;
+  domain_provider: string | null;
+  hosting_provider: string | null;
   legacy_notes: string | null;
 };
 
@@ -67,6 +76,8 @@ export function emptyWorkspace(): WorkspacePayload {
     total_price: null,
     extra_revision_charge: null,
     monthly_maintenance_fee: null,
+    domain_provider: null,
+    hosting_provider: null,
     legacy_notes: null,
   };
 }
@@ -105,6 +116,7 @@ function normaliseTimeline(v: unknown): WorkspaceTimelineEntry[] {
         start: str(r.start),
         end: str(r.end),
         notes: str(r.notes),
+        client_action: str(r.client_action),
       };
     })
     .filter(Boolean) as WorkspaceTimelineEntry[];
@@ -123,6 +135,9 @@ function normalisePricing(v: unknown): WorkspacePricingItem[] {
         id: typeof r.id === "string" ? r.id : ensureId("pi"),
         label: label ?? "",
         amount,
+        description: str(r.description),
+        frequency: str(r.frequency),
+        highlight: typeof r.highlight === "boolean" ? r.highlight : false,
       };
     })
     .filter(Boolean) as WorkspacePricingItem[];
@@ -143,6 +158,7 @@ function normaliseMilestones(v: unknown): WorkspaceMilestone[] {
         due: str(r.due),
         amount,
         paid: Boolean(r.paid),
+        paid_via: str(r.paid_via),
       };
     })
     .filter(Boolean) as WorkspaceMilestone[];
@@ -195,6 +211,8 @@ export function parseWorkspace(termsNotes: string | null | undefined): Workspace
     total_price: num(r.total_price),
     extra_revision_charge: num(r.extra_revision_charge),
     monthly_maintenance_fee: num(r.monthly_maintenance_fee),
+    domain_provider: str(r.domain_provider),
+    hosting_provider: str(r.hosting_provider),
     legacy_notes: str(r.legacy_notes),
   };
 }
@@ -205,11 +223,341 @@ export function serializeWorkspace(payload: WorkspacePayload): string {
 }
 
 export function newTimelineEntry(): WorkspaceTimelineEntry {
-  return { id: ensureId("tl"), phase: "", start: null, end: null, notes: null };
+  return { id: ensureId("tl"), phase: "", start: null, end: null, notes: null, client_action: null };
 }
 export function newPricingItem(): WorkspacePricingItem {
   return { id: ensureId("pi"), label: "", amount: 0 };
 }
 export function newMilestone(): WorkspaceMilestone {
-  return { id: ensureId("ms"), label: "", due: null, amount: 0, paid: false };
+  return { id: ensureId("ms"), label: "", due: null, amount: 0, paid: false, paid_via: null };
 }
+
+/* ── Default phases ───────────────────────────────────────────────── */
+
+/* ── Client action suggestions per phase ─────────────────────────── */
+
+const PHASE_CLIENT_ACTIONS: Record<string, string> = {
+  discovery:   "Share brand assets, login credentials, and answer the onboarding questionnaire",
+  design:      "Review mockups and wireframes; provide consolidated feedback within 3 business days",
+  development: "Provide final copy, images, and menu/product content; review staging site",
+  launch:      "Approve final site, confirm domain transfer, and complete final payment",
+  review:      "Test the live site on your own devices and report any issues within 48 hours",
+  revision:    "Compile all revision requests into a single document and share with the Studio",
+  testing:     "Test on mobile and desktop; confirm all links, forms, and pages work correctly",
+  handover:    "Receive login credentials, confirm access, and sign off on delivery",
+};
+
+/** Returns a suggested client_action string for a given phase name. */
+export function suggestClientAction(phase: string): string {
+  const key = phase.toLowerCase().replace(/[^a-z]/g, "");
+  for (const [k, action] of Object.entries(PHASE_CLIENT_ACTIONS)) {
+    if (key.includes(k)) return action;
+  }
+  return "Review deliverables and provide feedback within 3 business days";
+}
+
+export function defaultTimelinePhases(): WorkspaceTimelineEntry[] {
+  const phases = [
+    { name: "Discovery",   action: PHASE_CLIENT_ACTIONS.discovery   },
+    { name: "Design",      action: PHASE_CLIENT_ACTIONS.design       },
+    { name: "Development", action: PHASE_CLIENT_ACTIONS.development  },
+    { name: "Launch",      action: PHASE_CLIENT_ACTIONS.launch       },
+  ];
+  return phases.map(({ name, action }) => ({
+    id: ensureId("tl"),
+    phase: name,
+    start: null,
+    end: null,
+    notes: null,
+    client_action: action,
+  }));
+}
+
+/* ── Industry-based goal suggestions ─────────────────────────────── */
+
+const INDUSTRY_GOALS: Record<string, string[]> = {
+  restaurant: [
+    "Enable online table reservations or order enquiries",
+    "Showcase menu with photos and dietary info",
+    "Improve local SEO to rank in 'near me' searches",
+    "Drive social media traffic with Instagram link",
+    "Build brand credibility with testimonials & gallery",
+  ],
+  cafe: [
+    "Enable online table reservations or order enquiries",
+    "Showcase menu with photos and seasonal specials",
+    "Improve local SEO to rank in 'near me' searches",
+    "Drive social media traffic with Instagram link",
+    "Build brand credibility with testimonials & gallery",
+  ],
+  clinic: [
+    "Allow patients to book appointments online",
+    "Present services and specialist team clearly",
+    "Build trust with credentials, testimonials & FAQs",
+    "Improve local search visibility",
+    "Provide downloadable forms or health resources",
+  ],
+  healthcare: [
+    "Allow patients to book appointments online",
+    "Present services and specialist team clearly",
+    "Build trust with credentials, testimonials & FAQs",
+    "Improve local search visibility",
+    "Provide downloadable forms or health resources",
+  ],
+  gym: [
+    "Showcase membership plans and pricing clearly",
+    "Allow class bookings or trial session sign-ups",
+    "Highlight trainers and transformation stories",
+    "Drive Instagram and YouTube traffic",
+    "Rank for local fitness searches",
+  ],
+  fitness: [
+    "Showcase membership plans and pricing clearly",
+    "Allow class bookings or trial session sign-ups",
+    "Highlight trainers and transformation stories",
+    "Drive Instagram and YouTube traffic",
+    "Rank for local fitness searches",
+  ],
+  ecommerce: [
+    "Drive product discovery and increase conversion rate",
+    "Provide a fast, mobile-friendly shopping experience",
+    "Reduce cart abandonment with a smooth checkout",
+    "Enable product search, filtering and reviews",
+    "Build customer trust with secure payment badges",
+  ],
+  retail: [
+    "Drive product discovery and increase conversion rate",
+    "Provide a fast, mobile-friendly shopping experience",
+    "Showcase bestsellers and seasonal promotions",
+    "Enable product search, filtering and reviews",
+    "Build customer trust with secure payment badges",
+  ],
+  education: [
+    "Present courses, curriculum and faculty clearly",
+    "Allow prospective students to apply or enquire online",
+    "Showcase student success stories and testimonials",
+    "Improve search rankings for course-related keywords",
+    "Provide resources or a student portal",
+  ],
+  realestate: [
+    "Showcase property listings with search and filters",
+    "Allow buyers or renters to enquire or book viewings",
+    "Build agent credibility with bios and reviews",
+    "Rank for local property searches",
+    "Capture leads with contact and callback forms",
+  ],
+  saas: [
+    "Communicate product value proposition in under 5 seconds",
+    "Drive sign-ups or free trial activations",
+    "Showcase features, integrations and pricing clearly",
+    "Build trust with customer logos, case studies & reviews",
+    "Reduce support load with an accessible help or docs section",
+  ],
+  agency: [
+    "Showcase portfolio and case studies to attract ideal clients",
+    "Generate inbound enquiry and proposal requests",
+    "Communicate services and process clearly",
+    "Build credibility with testimonials and client logos",
+    "Rank for relevant local or niche search terms",
+  ],
+  law: [
+    "Present practice areas and expertise clearly",
+    "Allow clients to book a consultation online",
+    "Build trust with credentials, bar memberships and reviews",
+    "Rank for local legal search terms",
+    "Provide a secure contact form for confidential enquiries",
+  ],
+  legal: [
+    "Present practice areas and expertise clearly",
+    "Allow clients to book a consultation online",
+    "Build trust with credentials, bar memberships and reviews",
+    "Rank for local legal search terms",
+    "Provide a secure contact form for confidential enquiries",
+  ],
+};
+
+const DEFAULT_GOALS = [
+  "Establish a professional and credible online presence",
+  "Generate leads and enquiries through the website",
+  "Improve mobile experience for visitors",
+  "Rank higher in local and industry search results",
+  "Clearly communicate services, value and pricing",
+];
+
+export function suggestGoalsForIndustry(industry: string | null | undefined): string[] {
+  if (!industry) return DEFAULT_GOALS;
+  const key = industry.toLowerCase().replace(/[^a-z]/g, "");
+  for (const [k, goals] of Object.entries(INDUSTRY_GOALS)) {
+    if (key.includes(k)) return goals;
+  }
+  return DEFAULT_GOALS;
+}
+
+/* ── Auto pricing items from project parameters ─────────────────── */
+
+export function autoPricingItems(
+  websiteType: string | null | undefined,
+  pagesCount: number | null | undefined,
+  supportDays: number | null | undefined,
+): WorkspacePricingItem[] {
+  const items: WorkspacePricingItem[] = [];
+
+  const type = (websiteType ?? "").toLowerCase();
+  const pages = pagesCount ?? 5;
+  const support = supportDays ?? 30;
+
+  // Discovery & Strategy
+  items.push({
+    id: ensureId("pi"),
+    label: "Discovery & Strategy — Kickoff session, sitemap, content planning",
+    amount: 0,
+  });
+
+  // Design
+  const designLabel = `Website Design — ${pages} page${pages !== 1 ? "s" : ""}, responsive layout, brand-aligned`;
+  items.push({ id: ensureId("pi"), label: designLabel, amount: 0 });
+
+  // Development
+  const devLabel = type.includes("ecommerce") || type.includes("shop")
+    ? "Development — Custom build, product catalogue, cart & checkout"
+    : "Development — Custom build, contact form, SEO setup, integrations";
+  items.push({ id: ensureId("pi"), label: devLabel, amount: 0 });
+
+  // Launch & Handover
+  items.push({
+    id: ensureId("pi"),
+    label: "Launch & Handover — QA testing, domain setup, walkthrough session",
+    amount: 0,
+  });
+
+  // Support (if specified)
+  if (support > 0) {
+    items.push({
+      id: ensureId("pi"),
+      label: `Post-Launch Support — ${support}-day support period`,
+      amount: 0,
+    });
+  }
+
+  return items;
+}
+
+/* ── Default payment milestones ─────────────────────────────────── */
+
+export function defaultMilestones(totalPrice: number | null): WorkspaceMilestone[] {
+  const total = totalPrice ?? 0;
+  const advance = Math.round(total * 0.5);
+  const final = total - advance;
+  return [
+    {
+      id: ensureId("ms"),
+      label: "50% Advance — On project kickoff",
+      due: null,
+      amount: advance,
+      paid: false,
+    },
+    {
+      id: ensureId("ms"),
+      label: "50% Final — On project delivery",
+      due: null,
+      amount: final,
+      paid: false,
+    },
+  ];
+}
+
+/* ── Build defaults for a fresh workspace ────────────────────────── */
+
+export type ClientSeed = {
+  message?: string | null;
+  project_description?: string | null;
+  industry?: string | null;
+  website_type?: string | null;
+  pages_count?: number | null;
+  support_days?: number | null;
+  total_price?: number | null;
+};
+
+/**
+ * Given an existing (possibly empty) workspace and seed data from the Client
+ * record, fills in any fields that are empty/missing with sensible defaults.
+ * Never overwrites data the user has already entered.
+ */
+export function applyWorkspaceDefaults(
+  ws: WorkspacePayload,
+  seed: ClientSeed,
+): WorkspacePayload {
+  let changed = false;
+  const next = { ...ws };
+
+  // 1. Summary — auto-fill from lead message or project_description
+  if (!next.summary) {
+    const fallback = seed.message || seed.project_description || null;
+    if (fallback) {
+      next.summary = fallback;
+      changed = true;
+    } else {
+      // Provide a generic placeholder so it's never empty
+      next.summary = "A professional website project tailored to the client's business goals and target audience.";
+      changed = true;
+    }
+  }
+
+  // 2. Timeline — auto-create default phases if empty
+  if (!next.timeline || next.timeline.length === 0) {
+    next.timeline = defaultTimelinePhases();
+    changed = true;
+  }
+
+  // 3. Goals — auto-suggest based on industry if empty
+  if (!next.goals || next.goals.length === 0) {
+    next.goals = suggestGoalsForIndustry(seed.industry);
+    changed = true;
+  }
+
+  // 4. Pricing items — auto-generate from project params if empty
+  if (!next.pricing_items || next.pricing_items.length === 0) {
+    const wt = next.website_type ?? seed.website_type;
+    const pc = next.pages_count ?? seed.pages_count;
+    const sd = next.support_days ?? seed.support_days;
+    next.pricing_items = autoPricingItems(wt, pc, sd);
+    changed = true;
+  }
+
+  // 5. Milestones — auto-create 50/50 split if empty
+  if (!next.milestones || next.milestones.length === 0) {
+    const price = next.total_price ?? seed.total_price;
+    next.milestones = defaultMilestones(price);
+    changed = true;
+  }
+
+  return changed ? next : ws;
+}
+
+/* ── Suggested deliverables & exclusions ─────────────────────────── */
+
+export const SUGGESTED_DELIVERABLES = [
+  "Responsive website (mobile, tablet, desktop)",
+  "Up to {{pages_count}} custom-designed pages",
+  "Contact form with email notification",
+  "Google Maps integration",
+  "On-page SEO setup (meta titles, descriptions, sitemap)",
+  "Social media links & Instagram feed integration",
+  "Image gallery / portfolio section",
+  "WhatsApp chat button",
+  "Google Analytics setup",
+  "Basic speed & performance optimisation",
+];
+
+export const SUGGESTED_EXCLUSIONS = [
+  "Copywriting and content creation",
+  "Photography or videography",
+  "Logo design or branding",
+  "Domain registration & renewal",
+  "Hosting setup & fees",
+  "Third-party software subscriptions",
+  "E-commerce / online payments",
+  "Ongoing content updates after handover",
+  "Email hosting or G Suite setup",
+  "Multilingual or regional language content",
+];

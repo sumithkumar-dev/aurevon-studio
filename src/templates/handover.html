@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project Handover — {{client.business_name}}</title>
+    <title>{{client.business_name_slug}}_Handover_{{agreement.number}}_{{meta.date_iso}}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -53,7 +53,7 @@
       .page {
         position: relative;
         width: var(--page-w);
-        min-height: var(--page-h);
+        height: var(--page-h);
         background: var(--paper);
         margin: 0 auto 20px;
         padding: var(--pad-y) var(--pad-x) var(--pad-y)
@@ -413,6 +413,7 @@
       @media screen and (max-width: 768px) {
         .page {
           padding: 20px 15px 20px 25px;
+          height: auto;
           min-height: auto;
           margin-bottom: 20px;
         }
@@ -438,13 +439,14 @@
         html, body { background: none; }
         .page {
           width: var(--page-w);
-          min-height: var(--page-h);
+          height: var(--page-h);
           max-width: none;
           margin: 0;
           padding: var(--pad-y) var(--pad-x) var(--pad-y)
             calc(var(--pad-x) + var(--bar) + 8mm);
           page-break-after: always;
           break-after: page;
+          overflow: hidden;
         }
         .page:last-child {
           page-break-after: avoid;
@@ -463,7 +465,7 @@
         <h1 class="display">Your Website<br />Is Ready<br />to Launch</h1>
         <div class="divider-gold"></div>
         <p style="max-width: 100mm; color: var(--muted); line-height: 1.6;">
-          Prepared by Aurevon Studios for {{client.business_name}}<br />
+          Prepared by {{agency.name}} for {{client.business_name}}<br />
           Website: {{handover.website_url}}<br />
           Launch Date: {{project.launch_date}}
         </p>
@@ -547,9 +549,9 @@
       </div>
 
       <div class="page-footer">
-        <span><span class="agency-name">Aurevon Studios</span> · Handover Document</span>
+        <span><span class="agency-name">{{agency.name}}</span> · Handover Document</span>
         <span>{{client.business_name}} — Project Handover</span>
-        <span class="pg">01 / 02</span>
+        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
       </div>
     </div>
 
@@ -625,17 +627,19 @@
         <h2 class="section-title">Maintenance Options</h2>
         <p style="margin-bottom: 4mm;">Beyond the support period, the following ongoing services are available to keep your website running smoothly:</p>
 
+        {{#if pricing.has_maintenance}}
         {{#each pricing.items}}
-        {{#if highlight}}
-        <div class="deliverable-card">
-          <h3 class="sub-title">{{name}}</h3>
-          <p style="font-size: 10pt; color: var(--muted);">{{description}}</p>
+        {{#if this.highlight}}
+        <div class="deliverable-card" style="margin-bottom: 3mm;">
+          <h3 class="sub-title">{{this.name}}</h3>
+          <p style="font-size: 10pt; color: var(--muted);">{{this.description}}</p>
           <div class="info-block" style="margin-top: 2mm; margin-bottom: 0;">
-            <div class="value">{{../pricing.currency}}{{price}} / {{frequency}}</div>
+            <div class="value">{{../pricing.currency}}{{this.price}} / {{this.frequency}}</div>
           </div>
         </div>
         {{/if}}
         {{/each}}
+        {{/if}}
 
         <ul class="check-list" style="margin-top: 4mm;">
           <li><strong>Content Updates.</strong> Regular updates to text, images, and offers.</li>
@@ -650,7 +654,7 @@
       <div class="section closing-panel">
         <div class="eyebrow">With Thanks</div>
         <h2 class="section-title">Project Complete</h2>
-        <p>Thank you for choosing Aurevon Studios. We appreciate the opportunity to build your website and look forward to supporting {{client.business_name}}'s future growth.</p>
+        <p>Thank you for choosing {{agency.name}}. We appreciate the opportunity to build your website and look forward to supporting {{client.business_name}}'s future growth.</p>
       </div>
 
       <hr class="divider" />
@@ -669,11 +673,23 @@
       </div>
 
       <div class="page-footer">
-        <span><span class="agency-name">Aurevon Studios</span> · Handover Document</span>
+        <span><span class="agency-name">{{agency.name}}</span> · Handover Document</span>
         <span>{{client.business_name}} — Project Handover</span>
-        <span class="pg">02 / 02</span>
+        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
       </div>
     </div>
 
   </body>
+  <script>
+    (function () {
+      var pages = document.querySelectorAll(".page");
+      var total = pages.length;
+      pages.forEach(function (page, idx) {
+        var nums = page.querySelectorAll(".pg-num");
+        var tots = page.querySelectorAll(".pg-tot");
+        nums.forEach(function (el) { el.textContent = String(idx + 1).padStart(2, "0"); });
+        tots.forEach(function (el) { el.textContent = String(total).padStart(2, "0"); });
+      });
+    })();
+  </script>
 </html>

@@ -207,11 +207,13 @@ export type NewClientInput = Omit<
 
 export type DocumentType = "Proposal" | "Agreement" | "Invoice" | "Handover";
 export type DocumentStatus = "Not Generated" | "Generated";
+export type InvoiceSubtype = "advance" | "final" | "unified";
 
 export type ClientDocument = {
   id: string;
   client_id: string;
   doc_type: DocumentType;
+  invoice_subtype?: InvoiceSubtype | null;
   status: DocumentStatus;
   generated_at: string | null;
   file_url: string | null;
