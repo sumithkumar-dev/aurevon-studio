@@ -273,34 +273,55 @@ export function Dashboard({ email }: { email: string }) {
     Boolean(clientFilters.q.trim()) || clientFilters.project_status !== "All";
 
   async function patchClient(id: string, patch: ClientPatch) {
+    // ── Single source of truth for remaining_amount ──────────────────────────
+    // Always recompute remaining_amount from the final values that will exist
+    // on the client after this patch is applied.
+    //
+    // When patchWorkspace sends { final_price, advance_paid, remaining_amount }
+    // together (an atomic workspace save), we trust the patch's own
+    // remaining_amount directly — it was derived from fresh milestone data.
+    //
+    // For any other patch (e.g. a name change that doesn't touch pricing),
+    // we derive remaining_amount from whichever pricing fields ARE in the
+    // patch, falling back to the current client state for those that aren't.
+    //
+    // The key fix: remaining_amount is ALWAYS included in the DB write so the
+    // persisted value never diverges from the UI — this is what caused the
+    // "values reset on refresh" symptom.
+    const currentClient = clients.find((c) => c.id === id);
+
+    const effectiveRemaining =
+      // Trust an explicit remaining_amount from patchWorkspace
+      patch.remaining_amount !== undefined
+        ? patch.remaining_amount
+        : // Otherwise derive it from whatever pricing fields this patch contains
+          Math.max(
+            0,
+            (patch.final_price  ?? currentClient?.final_price  ?? 0) -
+            (patch.advance_paid ?? currentClient?.advance_paid ?? 0),
+          );
+
+    // Build the patch that always writes remaining_amount to Supabase
+    const persistPatch: ClientPatch = {
+      ...patch,
+      remaining_amount: effectiveRemaining,
+    };
+
+    // Optimistic UI update — apply immediately so the UI feels instant.
     setClients((prev) =>
       prev.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              ...patch,
-              remaining_amount:
-                (patch.final_price ?? c.final_price ?? 0) -
-                (patch.advance_paid ?? c.advance_paid ?? 0),
-            }
-          : c,
+        c.id === id ? { ...c, ...persistPatch } : c,
       ),
     );
     setSelectedClient((prev) =>
-      prev?.id === id
-        ? {
-            ...prev,
-            ...patch,
-            remaining_amount:
-              (patch.final_price ?? prev.final_price ?? 0) -
-              (patch.advance_paid ?? prev.advance_paid ?? 0),
-          }
-        : prev,
+      prev?.id === id ? { ...prev, ...persistPatch } : prev,
     );
+
     try {
-      await updateClient(id, patch);
+      await updateClient(id, persistPatch);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Client update failed.");
+      // Roll back the optimistic update by re-fetching from DB
       loadClients({ quiet: true });
     }
   }

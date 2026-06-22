@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "pdf-server": "node server/pdf-server.js",
+    "pdf-server-dev": "node --watch server/pdf-server.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -72,7 +72,7 @@ export function emptyWorkspace(): WorkspacePayload {
     timeline: [],
     pricing_items: [],
     milestones: [],
-    currency: "INR",
+    currency: "₹",
     total_price: null,
     extra_revision_charge: null,
     monthly_maintenance_fee: null,
@@ -149,11 +149,17 @@ function normaliseMilestones(v: unknown): WorkspaceMilestone[] {
     .map((raw): WorkspaceMilestone | null => {
       if (!raw || typeof raw !== "object") return null;
       const r = raw as Record<string, unknown>;
+      // Only discard entries that have no id AND no meaningful content at all.
+      // Previously this dropped entries with an empty label + amount 0, which
+      // caused a newly-added blank milestone to vanish after the first save,
+      // triggering a re-run of applyWorkspaceDefaults that regenerated milestones
+      // with fresh random IDs — the root cause of the "values reset on refresh" bug.
+      const hasId = typeof r.id === "string" && r.id.length > 0;
       const label = str(r.label);
       const amount = num(r.amount) ?? 0;
-      if (!label && amount === 0 && !r.due) return null;
+      if (!hasId && !label && amount === 0 && !r.due) return null;
       return {
-        id: typeof r.id === "string" ? r.id : ensureId("ms"),
+        id: hasId ? (r.id as string) : ensureId("ms"),
         label: label ?? "",
         due: str(r.due),
         amount,
@@ -169,7 +175,9 @@ function normaliseMilestones(v: unknown): WorkspaceMilestone[] {
  * contains plain (legacy) text instead of our JSON envelope, the text is
  * preserved as `legacy_notes`.
  */
-export function parseWorkspace(termsNotes: string | null | undefined): WorkspacePayload {
+export function parseWorkspace(
+  termsNotes: string | null | undefined,
+): WorkspacePayload {
   const base = emptyWorkspace();
   if (!termsNotes) return base;
 
@@ -207,7 +215,7 @@ export function parseWorkspace(termsNotes: string | null | undefined): Workspace
     timeline: normaliseTimeline(r.timeline),
     pricing_items: normalisePricing(r.pricing_items),
     milestones: normaliseMilestones(r.milestones),
-    currency: str(r.currency) ?? "INR",
+    currency: str(r.currency) ?? "₹",
     total_price: num(r.total_price),
     extra_revision_charge: num(r.extra_revision_charge),
     monthly_maintenance_fee: num(r.monthly_maintenance_fee),
@@ -223,13 +231,27 @@ export function serializeWorkspace(payload: WorkspacePayload): string {
 }
 
 export function newTimelineEntry(): WorkspaceTimelineEntry {
-  return { id: ensureId("tl"), phase: "", start: null, end: null, notes: null, client_action: null };
+  return {
+    id: ensureId("tl"),
+    phase: "",
+    start: null,
+    end: null,
+    notes: null,
+    client_action: null,
+  };
 }
 export function newPricingItem(): WorkspacePricingItem {
   return { id: ensureId("pi"), label: "", amount: 0 };
 }
 export function newMilestone(): WorkspaceMilestone {
-  return { id: ensureId("ms"), label: "", due: null, amount: 0, paid: false, paid_via: null };
+  return {
+    id: ensureId("ms"),
+    label: "",
+    due: null,
+    amount: 0,
+    paid: false,
+    paid_via: null,
+  };
 }
 
 /* ── Default phases ───────────────────────────────────────────────── */
@@ -237,14 +259,22 @@ export function newMilestone(): WorkspaceMilestone {
 /* ── Client action suggestions per phase ─────────────────────────── */
 
 const PHASE_CLIENT_ACTIONS: Record<string, string> = {
-  discovery:   "Share brand assets, login credentials, and answer the onboarding questionnaire",
-  design:      "Review mockups and wireframes; provide consolidated feedback within 3 business days",
-  development: "Provide final copy, images, and menu/product content; review staging site",
-  launch:      "Approve final site, confirm domain transfer, and complete final payment",
-  review:      "Test the live site on your own devices and report any issues within 48 hours",
-  revision:    "Compile all revision requests into a single document and share with the Studio",
-  testing:     "Test on mobile and desktop; confirm all links, forms, and pages work correctly",
-  handover:    "Receive login credentials, confirm access, and sign off on delivery",
+  discovery:
+    "Share brand assets, login credentials, and answer the onboarding questionnaire",
+  design:
+    "Review mockups and wireframes; provide consolidated feedback within 3 business days",
+  development:
+    "Provide final copy, images, and menu/product content; review staging site",
+  launch:
+    "Approve final site, confirm domain transfer, and complete final payment",
+  review:
+    "Test the live site on your own devices and report any issues within 48 hours",
+  revision:
+    "Compile all revision requests into a single document and share with the Studio",
+  testing:
+    "Test on mobile and desktop; confirm all links, forms, and pages work correctly",
+  handover:
+    "Receive login credentials, confirm access, and sign off on delivery",
 };
 
 /** Returns a suggested client_action string for a given phase name. */
@@ -258,10 +288,10 @@ export function suggestClientAction(phase: string): string {
 
 export function defaultTimelinePhases(): WorkspaceTimelineEntry[] {
   const phases = [
-    { name: "Discovery",   action: PHASE_CLIENT_ACTIONS.discovery   },
-    { name: "Design",      action: PHASE_CLIENT_ACTIONS.design       },
-    { name: "Development", action: PHASE_CLIENT_ACTIONS.development  },
-    { name: "Launch",      action: PHASE_CLIENT_ACTIONS.launch       },
+    { name: "Discovery", action: PHASE_CLIENT_ACTIONS.discovery },
+    { name: "Design", action: PHASE_CLIENT_ACTIONS.design },
+    { name: "Development", action: PHASE_CLIENT_ACTIONS.development },
+    { name: "Launch", action: PHASE_CLIENT_ACTIONS.launch },
   ];
   return phases.map(({ name, action }) => ({
     id: ensureId("tl"),
@@ -384,7 +414,9 @@ const DEFAULT_GOALS = [
   "Clearly communicate services, value and pricing",
 ];
 
-export function suggestGoalsForIndustry(industry: string | null | undefined): string[] {
+export function suggestGoalsForIndustry(
+  industry: string | null | undefined,
+): string[] {
   if (!industry) return DEFAULT_GOALS;
   const key = industry.toLowerCase().replace(/[^a-z]/g, "");
   for (const [k, goals] of Object.entries(INDUSTRY_GOALS)) {
@@ -418,9 +450,10 @@ export function autoPricingItems(
   items.push({ id: ensureId("pi"), label: designLabel, amount: 0 });
 
   // Development
-  const devLabel = type.includes("ecommerce") || type.includes("shop")
-    ? "Development — Custom build, product catalogue, cart & checkout"
-    : "Development — Custom build, contact form, SEO setup, integrations";
+  const devLabel =
+    type.includes("ecommerce") || type.includes("shop")
+      ? "Development — Custom build, product catalogue, cart & checkout"
+      : "Development — Custom build, contact form, SEO setup, integrations";
   items.push({ id: ensureId("pi"), label: devLabel, amount: 0 });
 
   // Launch & Handover
@@ -444,7 +477,9 @@ export function autoPricingItems(
 
 /* ── Default payment milestones ─────────────────────────────────── */
 
-export function defaultMilestones(totalPrice: number | null): WorkspaceMilestone[] {
+export function defaultMilestones(
+  totalPrice: number | null,
+): WorkspaceMilestone[] {
   const total = totalPrice ?? 0;
   const advance = Math.round(total * 0.5);
   const final = total - advance;
@@ -498,7 +533,8 @@ export function applyWorkspaceDefaults(
       changed = true;
     } else {
       // Provide a generic placeholder so it's never empty
-      next.summary = "A professional website project tailored to the client's business goals and target audience.";
+      next.summary =
+        "A professional website project tailored to the client's business goals and target audience.";
       changed = true;
     }
   }
@@ -524,11 +560,22 @@ export function applyWorkspaceDefaults(
     changed = true;
   }
 
-  // 5. Milestones — auto-create 50/50 split if empty
+  // 5. Milestones — auto-create 50/50 split ONLY when:
+  //    a) the milestones array is genuinely empty, AND
+  //    b) we have a real price to split (avoids generating ₹0/₹0 placeholders
+  //       that get normalised away on every reload, causing endless regeneration
+  //       with new random IDs — the root cause of the "reset on refresh" bug).
   if (!next.milestones || next.milestones.length === 0) {
     const price = next.total_price ?? seed.total_price;
-    next.milestones = defaultMilestones(price);
-    changed = true;
+    if (price !== null && price !== undefined && price > 0) {
+      next.milestones = defaultMilestones(price);
+      changed = true;
+    }
+    // If price is null/0, leave milestones as [] so the user adds them
+    // manually once they enter a project total. Generating zero-amount
+    // milestones causes normaliseMilestones to drop them on the next parse,
+    // triggering another applyWorkspaceDefaults pass with fresh random IDs
+    // that silently overwrites whatever the user had saved.
   }
 
   return changed ? next : ws;

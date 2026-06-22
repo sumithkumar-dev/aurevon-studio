@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-	AlertTriangle,
+  AlertTriangle,
   ArrowLeft,
   Briefcase,
   Building2,
@@ -63,6 +63,7 @@ import {
   type WorkspacePricingItem,
   type WorkspaceTimelineEntry,
 } from "../lib/workspace";
+import { formatCurrency, CURRENCY_OPTIONS } from "../lib/currency";
 
 /* ------------------------------------------------------------------ */
 /* Primitives                                                          */
@@ -152,7 +153,8 @@ function TextInput({
   placeholder?: string;
   type?: "text" | "email" | "tel" | "url" | "date";
 }) {
-  const initial = type === "date" ? toDateInputValue(value ?? null) : value ?? "";
+  const initial =
+    type === "date" ? toDateInputValue(value ?? null) : (value ?? "");
   const [local, setLocal] = useState(initial);
   useEffect(() => setLocal(initial), [initial]);
   return (
@@ -215,6 +217,65 @@ function TextArea({
   );
 }
 
+/**
+ * Milestone label input — uses local state so keystrokes don't trigger a save
+ * (and therefore don't re-run the workspace useEffect that was resetting milestones).
+ * Commits only onBlur, matching the TextInput/NumberInput primitives above.
+ */
+function MilestoneTextInput({
+  value,
+  onCommit,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (v: string | null) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => setLocal(value), [value]);
+  return (
+    <input
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => onCommit(local || null)}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
+/**
+ * Milestone amount input — uses local string state so the user can freely edit
+ * without triggering a DB save on every keystroke. Commits the parsed number
+ * onBlur, or 0 if the field is empty/invalid.
+ */
+function MilestoneAmountInput({
+  value,
+  onCommit,
+  className,
+}: {
+  value: number;
+  onCommit: (v: number) => void;
+  className?: string;
+}) {
+  const [local, setLocal] = useState(String(value));
+  useEffect(() => setLocal(String(value)), [value]);
+  return (
+    <input
+      inputMode="decimal"
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => {
+        const n = Number(local);
+        onCommit(Number.isFinite(n) ? n : 0);
+      }}
+      className={className}
+    />
+  );
+}
+
 function SelectInput<T extends string>({
   value,
   options,
@@ -233,6 +294,30 @@ function SelectInput<T extends string>({
       {options.map((o) => (
         <option key={o} value={o}>
           {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** Currency dropdown showing friendly labels ("₹  Indian Rupee (INR)") while
+ *  storing clean symbols ("₹") in workspace.currency. */
+function CurrencySelect({
+  value,
+  onChange,
+}: {
+  value: string | null | undefined;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select
+      value={value ?? "₹"}
+      onChange={(e) => onChange(e.target.value)}
+      className={inputClass}
+    >
+      {CURRENCY_OPTIONS.map((o) => (
+        <option key={o.symbol} value={o.symbol}>
+          {o.label}
         </option>
       ))}
     </select>
@@ -381,7 +466,9 @@ function CheckboxListEditor({
                   onChange={() => toggle(s)}
                   className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[hsl(var(--accent))] rounded"
                 />
-                <span className="text-sm text-foreground leading-snug">{s}</span>
+                <span className="text-sm text-foreground leading-snug">
+                  {s}
+                </span>
               </label>
             </li>
           ))}
@@ -403,7 +490,9 @@ function CheckboxListEditor({
                 <input
                   value={item}
                   onChange={(e) => {
-                    const next = items.map((i) => (i === item ? e.target.value : i));
+                    const next = items.map((i) =>
+                      i === item ? e.target.value : i,
+                    );
                     onChange(next);
                   }}
                   className="min-w-0 bg-transparent text-sm text-foreground outline-none"
@@ -463,7 +552,11 @@ type TabKey =
   | "documents"
   | "notes";
 
-const TABS: { key: TabKey; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
+const TABS: {
+  key: TabKey;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}[] = [
   { key: "client", label: "Client", Icon: User },
   { key: "business", label: "Business", Icon: Building2 },
   { key: "project", label: "Project", Icon: Briefcase },
@@ -493,33 +586,70 @@ export function ClientWorkspace({
 
   // Local workspace payload parsed from terms_notes. Edits are buffered and
   // committed onBlur / on explicit changes via patchWorkspace().
+  // ── Workspace initialization helpers ──────────────────────────────────────
+  // total_price has two storage locations:
+  //   1. workspace JSON (terms_notes) — the authoritative source once set
+  //   2. client.final_price (DB column) — written as a side-effect of
+  //      patchWorkspace for query/display purposes
+  //
+  // On first load (empty terms_notes), seed from client.final_price so
+  // existing pricing data isn't lost. On subsequent loads, always prefer
+  // the workspace's own total_price — it is the value the user last edited
+  // in the workspace UI, and client.final_price is a derived copy of it.
+  // Using client.final_price when workspace has its own value was what caused
+  // the "milestone amounts reset after refresh" bug: the client row might
+  // lag one write cycle behind the workspace JSON, so the seed would inject
+  // a stale price into applyWorkspaceDefaults, which then regenerated fresh
+  // milestones (with new random IDs) over the user's saved ones.
+  function buildWorkspaceSeed(
+    parsed: WorkspacePayload,
+  ): import("../lib/workspace").ClientSeed {
+    return {
+      message: (client as unknown as Record<string, unknown>).lead_message as
+        | string
+        | null,
+      project_description: client.project_description,
+      industry: client.industry,
+      website_type: parsed.website_type,
+      pages_count: parsed.pages_count,
+      support_days: parsed.support_days,
+      // Only fall back to client.final_price when the workspace has no price
+      // of its own — prevents a stale DB column from overwriting a fresher
+      // workspace value during re-initialization.
+      total_price: parsed.total_price ?? client.final_price,
+    };
+  }
+
   const [workspace, setWorkspace] = useState<WorkspacePayload>(() => {
     const parsed = parseWorkspace(client.terms_notes);
-    return applyWorkspaceDefaults(parsed, {
-      message: (client as unknown as Record<string, unknown>).lead_message as string | null,
-      project_description: client.project_description,
-      industry: client.industry,
-      website_type: parsed.website_type,
-      pages_count: parsed.pages_count,
-      support_days: parsed.support_days,
-      total_price: parsed.total_price ?? client.final_price,
-    });
+    // Only apply defaults when there is no saved workspace JSON yet.
+    // Once a workspace has been saved (terms_notes starts with { and has the
+    // __workspace tag), the parsed data IS the source of truth — never
+    // overwrite it with auto-generated defaults.
+    const alreadySaved =
+      typeof client.terms_notes === "string" &&
+      client.terms_notes.trim().startsWith("{");
+    return alreadySaved ? parsed : applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed));
   });
+  // Re-initialize ONLY when switching to a different client (client.id changes).
+  // Must NOT depend on client.terms_notes — every patchWorkspace call updates
+  // terms_notes, which would cause a re-parse loop resetting in-flight edits.
+  // The local setWorkspace call inside patchWorkspace is the single update path
+  // after initial mount.
   useEffect(() => {
     const parsed = parseWorkspace(client.terms_notes);
-    const withDefaults = applyWorkspaceDefaults(parsed, {
-      message: (client as unknown as Record<string, unknown>).lead_message as string | null,
-      project_description: client.project_description,
-      industry: client.industry,
-      website_type: parsed.website_type,
-      pages_count: parsed.pages_count,
-      support_days: parsed.support_days,
-      total_price: parsed.total_price ?? client.final_price,
-    });
-    setWorkspace(withDefaults);
-  }, [client.id, client.terms_notes]);
+    const alreadySaved =
+      typeof client.terms_notes === "string" &&
+      client.terms_notes.trim().startsWith("{");
+    setWorkspace(
+      alreadySaved ? parsed : applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client.id]);  // client.id only — never client.terms_notes
   // Save status indicator (Saving / Saved / Error) for edits made in this workspace.
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
 
   async function handlePatch(patch: ClientPatch) {
@@ -540,23 +670,44 @@ export function ClientWorkspace({
     totalPrice: number | null,
   ): import("../types").PaymentStatus {
     if (!milestones.length) return "Not Started";
-    const paidTotal = milestones.filter((m) => m.paid).reduce((s, m) => s + m.amount, 0);
+    const paidTotal = milestones
+      .filter((m) => m.paid)
+      .reduce((s, m) => s + m.amount, 0);
     if (paidTotal === 0) return "Not Started";
     const total = totalPrice ?? milestones.reduce((s, m) => s + m.amount, 0);
     if (total > 0 && paidTotal >= total) return "Fully Paid";
-    if (milestones[0]?.paid && !milestones.slice(1).some((m) => m.paid)) return "Advance Paid";
+    if (milestones[0]?.paid && !milestones.slice(1).some((m) => m.paid))
+      return "Advance Paid";
     return "Partially Paid";
   }
 
   function patchWorkspace(partial: Partial<WorkspacePayload>) {
     const next = { ...workspace, ...partial };
     setWorkspace(next);
-    if ("milestones" in partial || "total_price" in partial || "pricing_items" in partial) {
+    if (
+      "milestones" in partial ||
+      "total_price" in partial ||
+      "pricing_items" in partial
+    ) {
       const derived = derivePaymentStatus(next.milestones, next.total_price);
-      const paidTotal = next.milestones.filter((m) => m.paid).reduce((s, m) => s + m.amount, 0);
-      const total = next.total_price
-        ?? next.milestones.reduce((s, m) => s + m.amount, 0)
-        ?? next.pricing_items.reduce((s, it) => s + it.amount, 0);
+      const paidTotal = next.milestones
+        .filter((m) => m.paid)
+        .reduce((s, m) => s + m.amount, 0);
+
+      // Compute the canonical project total — single source of truth.
+      // Priority: explicit total_price > sum of milestones (if any exist) >
+      // sum of pricing items (last resort when no milestones and no total set).
+      // Note: Array.reduce() always returns a number (0 for empty arrays), so
+      // we cannot use ?? chaining — we check array length explicitly instead.
+      const milestonesSum = next.milestones.reduce((s, m) => s + m.amount, 0);
+      const itemsSum = next.pricing_items.reduce((s, it) => s + it.amount, 0);
+      const total =
+        next.total_price !== null && next.total_price !== undefined
+          ? next.total_price
+          : next.milestones.length > 0
+            ? milestonesSum
+            : itemsSum;
+
       const remaining = Math.max(0, total - paidTotal);
       handlePatch({
         terms_notes: serializeWorkspace(next),
@@ -583,7 +734,8 @@ export function ClientWorkspace({
 
   // Pricing totals.
   const itemsSubtotal = useMemo(
-    () => workspace.pricing_items.reduce((sum, it) => sum + (it.amount || 0), 0),
+    () =>
+      workspace.pricing_items.reduce((sum, it) => sum + (it.amount || 0), 0),
     [workspace.pricing_items],
   );
   const milestonesTotal = useMemo(
@@ -618,7 +770,8 @@ export function ClientWorkspace({
                 onClick={onClose}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors"
               >
-                <ArrowLeft size={13} /> <span className="hidden sm:inline">Back</span>
+                <ArrowLeft size={13} />{" "}
+                <span className="hidden sm:inline">Back</span>
               </button>
               <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent/10 text-accent">
                 <Briefcase size={16} />
@@ -628,7 +781,9 @@ export function ClientWorkspace({
                   Client workspace
                 </div>
                 <h1 className="truncate text-lg font-medium text-foreground md:text-xl">
-                  {client.business_name || client.client_name || "Untitled client"}
+                  {client.business_name ||
+                    client.client_name ||
+                    "Untitled client"}
                 </h1>
               </div>
             </div>
@@ -655,7 +810,8 @@ export function ClientWorkspace({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
                 aria-label="Delete client"
               >
-                <Trash2 size={13} /> <span className="hidden sm:inline">Delete</span>
+                <Trash2 size={13} />{" "}
+                <span className="hidden sm:inline">Delete</span>
               </button>
               <button
                 onClick={onClose}
@@ -694,7 +850,9 @@ export function ClientWorkspace({
         <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-3">
           <div className="container-aurevon flex items-center gap-2 text-sm text-destructive">
             <AlertTriangle size={14} className="shrink-0" />
-            <span>{saveError ?? "Save failed. Your change may not have been saved."}</span>
+            <span>
+              {saveError ?? "Save failed. Your change may not have been saved."}
+            </span>
           </div>
         </div>
       )}
@@ -724,7 +882,10 @@ export function ClientWorkspace({
             <ScopeTab workspace={workspace} onPatchWorkspace={patchWorkspace} />
           )}
           {tab === "timeline" && (
-            <TimelineTab workspace={workspace} onPatchWorkspace={patchWorkspace} />
+            <TimelineTab
+              workspace={workspace}
+              onPatchWorkspace={patchWorkspace}
+            />
           )}
           {tab === "pricing" && (
             <PricingTab
@@ -750,7 +911,8 @@ export function ClientWorkspace({
                   const idx = prev.findIndex(
                     (d) =>
                       d.doc_type === updated.doc_type &&
-                      (d.invoice_subtype ?? null) === (updated.invoice_subtype ?? null),
+                      (d.invoice_subtype ?? null) ===
+                        (updated.invoice_subtype ?? null),
                   );
                   if (idx === -1) return [...prev, updated];
                   return prev.map((d, i) => (i === idx ? updated : d));
@@ -816,7 +978,10 @@ function ClientTab({
           <TextInput
             value={client.primary_contact_name ?? client.client_name}
             onCommit={(v) =>
-              onPatch({ primary_contact_name: v, client_name: v ?? client.client_name })
+              onPatch({
+                primary_contact_name: v,
+                client_name: v ?? client.client_name,
+              })
             }
           />
         </Field>
@@ -827,13 +992,14 @@ function ClientTab({
             placeholder="Founder, Marketing Lead..."
           />
         </Field>
-        <Field label="Document contact email" hint="Used on proposals, agreements, and invoices.">
+        <Field
+          label="Document contact email"
+          hint="Used on proposals, agreements, and invoices."
+        >
           <TextInput
             type="email"
             value={client.primary_contact_email ?? client.email}
-            onCommit={(v) =>
-              onPatch({ primary_contact_email: v })
-            }
+            onCommit={(v) => onPatch({ primary_contact_email: v })}
           />
         </Field>
         <Field label="Phone">
@@ -881,7 +1047,10 @@ function BusinessTab({
             onCommit={(v) => onPatch({ owner_name: v })}
           />
         </Field>
-        <Field label="Business email" hint="Internal record only — not shown on generated documents.">
+        <Field
+          label="Business email"
+          hint="Internal record only — not shown on generated documents."
+        >
           <TextInput
             type="email"
             value={client.business_email}
@@ -1225,7 +1394,9 @@ function TimelineTab({
                 <Field label="Phase">
                   <input
                     value={entry.phase}
-                    onChange={(e) => update(entry.id, { phase: e.target.value })}
+                    onChange={(e) =>
+                      update(entry.id, { phase: e.target.value })
+                    }
                     placeholder="Discovery, Design, Build, Launch..."
                     className={inputClass}
                   />
@@ -1273,7 +1444,9 @@ function TimelineTab({
                   <textarea
                     value={entry.client_action ?? ""}
                     onChange={(e) =>
-                      update(entry.id, { client_action: e.target.value || null })
+                      update(entry.id, {
+                        client_action: e.target.value || null,
+                      })
                     }
                     rows={2}
                     placeholder={suggestClientAction(entry.phase)}
@@ -1308,13 +1481,8 @@ function PricingTab({
   onPatch: (patch: ClientPatch) => void | Promise<void>;
   onPatchWorkspace: (partial: Partial<WorkspacePayload>) => void;
 }) {
-  const currency = workspace.currency ?? "INR";
-  const fmt = (n: number) =>
-    new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(n);
+  const currency = workspace.currency ?? "₹";
+  const fmt = (n: number) => formatCurrency(n, currency);
 
   function updateItem(id: string, patch: Partial<WorkspacePricingItem>) {
     onPatchWorkspace({
@@ -1338,9 +1506,8 @@ function PricingTab({
       <SectionCard title="Pricing" Icon={CircleDollarSign}>
         <div className="grid gap-4 md:grid-cols-4">
           <Field label="Currency">
-            <SelectInput<string>
+            <CurrencySelect
               value={currency}
-              options={["INR", "USD", "EUR", "GBP", "AED"] as const}
               onChange={(v) => onPatchWorkspace({ currency: v })}
             />
           </Field>
@@ -1348,21 +1515,31 @@ function PricingTab({
             <NumberInput
               value={workspace.total_price ?? client.final_price}
               onCommit={(v) => {
-                onPatchWorkspace({ total_price: v });
-                onPatch({ final_price: v });
-                // Auto-recalculate milestones if they were auto-generated (50/50)
-                if (workspace.milestones.length === 2) {
-                  const price = v ?? 0;
+                // Single atomic workspace patch — patchWorkspace already syncs
+                // final_price, advance_paid, remaining_amount, and payment_status
+                // as part of its milestone/total_price change handler, so we
+                // never need a separate onPatch({ final_price }) call here.
+                const price = v ?? 0;
+                // Auto-recalculate milestones when exactly 2 exist (the standard
+                // 50/50 auto-generated split). Guards: only recalculate if the
+                // milestone labels still look like the auto-generated ones, so
+                // user-customised splits aren't silently overwritten.
+                const ms = workspace.milestones;
+                const isDefaultSplit =
+                  ms.length === 2 && !ms[0].paid && !ms[1].paid;
+                if (isDefaultSplit) {
                   const advance = Math.round(price * 0.5);
                   const final = price - advance;
                   onPatchWorkspace({
                     total_price: v,
-                    milestones: workspace.milestones.map((m, i) =>
+                    milestones: ms.map((m, i) =>
                       i === 0
                         ? { ...m, amount: advance }
                         : { ...m, amount: final },
                     ),
                   });
+                } else {
+                  onPatchWorkspace({ total_price: v });
                 }
               }}
             />
@@ -1379,11 +1556,43 @@ function PricingTab({
               onCommit={(v) => onPatchWorkspace({ monthly_maintenance_fee: v })}
             />
           </Field>
-          <Field label="Advance paid">
-            <NumberInput
-              value={client.advance_paid}
-              onCommit={(v) => onPatch({ advance_paid: v ?? 0 })}
-            />
+          <Field
+            label="Advance paid"
+            hint={
+              workspace.milestones.length > 0
+                ? "Auto-calculated from paid milestones"
+                : undefined
+            }
+          >
+            {workspace.milestones.length > 0 ? (
+              <div
+                className={
+                  inputClass +
+                  " text-muted-foreground select-none cursor-default"
+                }
+              >
+                {fmt(client.advance_paid)}
+              </div>
+            ) : (
+              <NumberInput
+                value={client.advance_paid}
+                onCommit={(v) => {
+                  const advance = v ?? 0;
+                  const total = workspace.total_price ?? client.final_price ?? 0;
+                  const remaining = Math.max(0, total - advance);
+                  onPatch({
+                    advance_paid: advance,
+                    remaining_amount: remaining,
+                    payment_status:
+                      advance <= 0
+                        ? "Not Started"
+                        : advance >= total && total > 0
+                          ? "Fully Paid"
+                          : "Partially Paid",
+                  });
+                }}
+              />
+            )}
           </Field>
           <Field label="Payment status">
             <SelectInput<PaymentStatus>
@@ -1445,7 +1654,8 @@ function PricingTab({
         {workspace.pricing_items.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-background/20 p-6 text-center">
             <p className="mb-3 text-sm text-muted-foreground">
-              No line items yet. Auto-generate from project type and pages count.
+              No line items yet. Auto-generate from project type and pages
+              count.
             </p>
             <button
               type="button"
@@ -1502,7 +1712,9 @@ function PricingTab({
             ))}
             <li className="flex items-center justify-end gap-3 pt-1 text-sm">
               <span className="text-muted-foreground">Items subtotal</span>
-              <span className="font-medium text-foreground">{fmt(itemsSubtotal)}</span>
+              <span className="font-medium text-foreground">
+                {fmt(itemsSubtotal)}
+              </span>
             </li>
           </ul>
         )}
@@ -1580,31 +1792,33 @@ function PricingTab({
                       aria-label="Mark milestone as paid"
                     />
                   </label>
-                  <input
+                  <MilestoneTextInput
                     value={m.label}
-                    onChange={(e) => updateMilestone(m.id, { label: e.target.value })}
+                    onCommit={(v) => updateMilestone(m.id, { label: v ?? "" })}
                     placeholder="Milestone label (e.g. 50% on kickoff)"
                     className="min-w-0 bg-transparent text-sm text-foreground outline-none"
                   />
                   <input
                     type="date"
-                    value={toDateInputValue(m.due ?? null)}
-                    onChange={(e) => updateMilestone(m.id, { due: e.target.value || null })}
+                    defaultValue={toDateInputValue(m.due ?? null)}
+                    key={`due-${m.id}-${m.due ?? ""}`}
+                    onBlur={(e) =>
+                      updateMilestone(m.id, { due: e.target.value || null })
+                    }
                     className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent/60"
                   />
-                  <input
-                    inputMode="decimal"
+                  <MilestoneAmountInput
                     value={m.amount}
-                    onChange={(e) =>
-                      updateMilestone(m.id, { amount: Number(e.target.value) || 0 })
-                    }
+                    onCommit={(v) => updateMilestone(m.id, { amount: v ?? 0 })}
                     className="rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm text-foreground outline-none focus:border-accent/60"
                   />
                   <button
                     type="button"
                     onClick={() =>
                       onPatchWorkspace({
-                        milestones: workspace.milestones.filter((x) => x.id !== m.id),
+                        milestones: workspace.milestones.filter(
+                          (x) => x.id !== m.id,
+                        ),
                       })
                     }
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
@@ -1622,7 +1836,9 @@ function PricingTab({
                     <select
                       value={m.paid_via ?? ""}
                       onChange={(e) =>
-                        updateMilestone(m.id, { paid_via: e.target.value || null })
+                        updateMilestone(m.id, {
+                          paid_via: e.target.value || null,
+                        })
                       }
                       className={
                         "rounded-md border bg-background px-2 py-1 text-sm text-foreground outline-none " +
@@ -1640,8 +1856,8 @@ function PricingTab({
                     </select>
                     {!m.paid_via ? (
                       <span className="text-[11px] text-accent">
-                        Pick how the client paid — this is what shows on the invoice
-                        instead of "How to Pay".
+                        Pick how the client paid — this is what shows on the
+                        invoice instead of "How to Pay".
                       </span>
                     ) : null}
                   </div>
@@ -1650,7 +1866,9 @@ function PricingTab({
             ))}
             <li className="flex items-center justify-end gap-3 pt-1 text-sm">
               <span className="text-muted-foreground">Milestones total</span>
-              <span className="font-medium text-foreground">{fmt(milestonesTotal)}</span>
+              <span className="font-medium text-foreground">
+                {fmt(milestonesTotal)}
+              </span>
             </li>
           </ul>
         )}
@@ -1679,7 +1897,9 @@ function DocumentsTab({
   onPatch: (patch: import("../types").ClientPatch) => void;
 }) {
   const [generating, setGenerating] = useState<string | null>(null);
-  const [genErrors, setGenErrors] = useState<Partial<Record<string, string>>>({});
+  const [genErrors, setGenErrors] = useState<Partial<Record<string, string>>>(
+    {},
+  );
 
   // Warning dialog state
   const [warn, setWarn] = useState<{
@@ -1688,7 +1908,10 @@ function DocumentsTab({
     invoiceType: "advance" | "final" | "unified";
   } | null>(null);
 
-  function handleGenerateClick(docType: DocumentType, invoiceType: "advance" | "final" | "unified" = "advance") {
+  function handleGenerateClick(
+    docType: DocumentType,
+    invoiceType: "advance" | "final" | "unified" = "advance",
+  ) {
     const missing = getMissingFields(docType, client, workspace);
     if (missing.length > 0) {
       setWarn({ docType, missing, invoiceType });
@@ -1697,14 +1920,24 @@ function DocumentsTab({
     }
   }
 
-  async function doGenerate(docType: DocumentType, invoiceType: "advance" | "final" | "unified" = "advance") {
+  async function doGenerate(
+    docType: DocumentType,
+    invoiceType: "advance" | "final" | "unified" = "advance",
+  ) {
     setWarn(null);
-    const cardKey = docType === "Invoice" ? `${docType}-${invoiceType}` : docType;
+    const cardKey =
+      docType === "Invoice" ? `${docType}-${invoiceType}` : docType;
     setGenerating(cardKey);
     setGenErrors((prev) => ({ ...prev, [cardKey]: undefined }));
     try {
       const existingDocs = docs ?? [];
-      generateAndPrint(docType, client, workspace, existingDocs, invoiceType);
+      await generateAndPrint(
+        docType,
+        client,
+        workspace,
+        existingDocs,
+        invoiceType,
+      );
       const generatedAt = new Date().toISOString();
 
       // Side-effect: stamp agreement_date on the client when first generating the Agreement
@@ -1712,17 +1945,29 @@ function DocumentsTab({
         onPatch({ agreement_date: new Date().toISOString().slice(0, 10) });
       }
       // Build metadata with stable ID so it persists for future generations
-      const prefix = docType === "Proposal" ? "PRO"
-        : docType === "Agreement" ? "AGR"
-        : docType === "Invoice"   ? "INV"
-        : "HND";
-      const existingMeta = existingDocs.find((d) => d.doc_type === docType)?.metadata ?? {};
+      const prefix =
+        docType === "Proposal"
+          ? "PRO"
+          : docType === "Agreement"
+            ? "AGR"
+            : docType === "Invoice"
+              ? "INV"
+              : "HND";
+      const existingMeta =
+        existingDocs.find((d) => d.doc_type === docType)?.metadata ?? {};
       const idKey = `${prefix.toLowerCase()}_id`;
-      const stableDocId = typeof existingMeta[idKey] === "string"
-        ? existingMeta[idKey] as string
-        : `${prefix}-${new Date().getFullYear()}-${client.id.replace(/-/g, "").slice(-6).toUpperCase()}`;
+      const stableDocId =
+        typeof existingMeta[idKey] === "string"
+          ? (existingMeta[idKey] as string)
+          : `${prefix}-${new Date().getFullYear()}-${client.id.replace(/-/g, "").slice(-6).toUpperCase()}`;
       const metadata = { ...existingMeta, [idKey]: stableDocId };
-      const updated = await upsertDocument(client.id, docType, generatedAt, metadata, invoiceType !== "unified" ? invoiceType : undefined);
+      const updated = await upsertDocument(
+        client.id,
+        docType,
+        generatedAt,
+        metadata,
+        invoiceType !== "unified" ? invoiceType : undefined,
+      );
       onDocGenerated(updated);
     } catch (err) {
       setGenErrors((prev) => ({
@@ -1794,15 +2039,21 @@ function DocumentsTab({
           <ul className="grid gap-3 sm:grid-cols-2">
             {docs.map((doc) => {
               const generated = doc.status === "Generated";
-              const cardKey = doc.doc_type === "Invoice" && doc.invoice_subtype
-                ? `${doc.doc_type}-${doc.invoice_subtype}`
-                : doc.doc_type;
+              const cardKey =
+                doc.doc_type === "Invoice" && doc.invoice_subtype
+                  ? `${doc.doc_type}-${doc.invoice_subtype}`
+                  : doc.doc_type;
               const isGenerating = generating === cardKey;
               const error = genErrors[cardKey as DocumentType];
-              const missingCount = getMissingFields(doc.doc_type, client, workspace).length;
-              const displayLabel = doc.doc_type === "Invoice" && doc.invoice_subtype
-                ? `Invoice (${doc.invoice_subtype.charAt(0).toUpperCase() + doc.invoice_subtype.slice(1)})`
-                : doc.doc_type;
+              const missingCount = getMissingFields(
+                doc.doc_type,
+                client,
+                workspace,
+              ).length;
+              const displayLabel =
+                doc.doc_type === "Invoice" && doc.invoice_subtype
+                  ? `Invoice (${doc.invoice_subtype.charAt(0).toUpperCase() + doc.invoice_subtype.slice(1)})`
+                  : doc.doc_type;
               return (
                 <li
                   key={doc.id}
@@ -1851,23 +2102,32 @@ function DocumentsTab({
 
                   <div className="mt-3">
                     {error && (
-                      <p className="mb-2 text-[11px] text-destructive">{error}</p>
+                      <p className="mb-2 text-[11px] text-destructive">
+                        {error}
+                      </p>
                     )}
                     <button
                       type="button"
                       onClick={() =>
                         handleGenerateClick(
                           doc.doc_type,
-                          (doc.invoice_subtype as "advance" | "final") ?? "advance",
+                          (doc.invoice_subtype as "advance" | "final") ??
+                            "advance",
                         )
                       }
                       disabled={generating !== null}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-60"
                     >
                       {isGenerating ? (
-                        <><Loader2 size={12} className="animate-spin" /> Opening PDF…</>
+                        <>
+                          <Loader2 size={12} className="animate-spin" /> Opening
+                          PDF…
+                        </>
                       ) : (
-                        <><Download size={12} />{generated ? "Re-generate PDF" : "Generate PDF"}</>
+                        <>
+                          <Download size={12} />
+                          {generated ? "Re-generate PDF" : "Generate PDF"}
+                        </>
                       )}
                     </button>
                   </div>

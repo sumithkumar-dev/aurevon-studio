@@ -15,7 +15,7 @@ export const agency = {
   },
 
   legal: {
-    currency: "INR",
+    currency: "₹",
     proposal_valid_days: 14,
   },
 };

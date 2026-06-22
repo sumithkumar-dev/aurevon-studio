@@ -167,6 +167,7 @@ export type ClientPatch = Partial<
     | "project_end_date"
     | "revision_count"
     | "terms_notes"
+    | "remaining_amount"
     | "primary_contact_name"
     | "primary_contact_phone"
     | "primary_contact_email"

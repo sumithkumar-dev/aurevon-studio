@@ -36,64 +36,69 @@
         --page-w: 210mm;
         --page-h: 297mm;
         --pad-x: 14mm;
-        --pad-y: 12mm;
+        --pad-y: 18mm;
         --bar: 5px;
+        --footer-h: 16mm; /* reserved space for the repeating footer */
       }
 
       html,
       body {
-        background: #d0cfc9;
+        background: var(--paper);
         font-family: var(--sans);
         color: var(--ink);
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
 
-      /* ── Page shell ─────────────────────────────────────────────────── */
-      .page {
+      /* ── Document shell ────────────────────────────────────────────────
+         One continuous flowing column. Puppeteer paginates naturally.
+         Left padding: gold bar (5px) + 8mm gap + base margin (14mm).
+         Bottom padding reserves screen footer space; @page margin handles
+         bottom spacing in print. ──────────────────────────────────────── */
+      .sheet {
         position: relative;
         width: var(--page-w);
-        height: var(--page-h);
+        margin: 0 auto;
         background: var(--paper);
-        margin: 0 auto 20px;
-        padding: var(--pad-y) var(--pad-x) var(--pad-y)
+        padding: var(--pad-y) var(--pad-x) calc(var(--footer-h) + 14mm)
           calc(var(--pad-x) + var(--bar) + 8mm);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
       }
 
-      /* Gold left bookmark bar */
-      .page::before {
-        content: "";
-        position: absolute;
-        left: 0;
+      /* Gold left bookmark bar — fixed so it repeats on every printed
+         page without depending on per-page wrapper divs. */
+      .side-bar {
+        position: fixed;
+        left: 6mm;
         top: 0;
         bottom: 0;
         width: var(--bar);
         background: var(--gold);
       }
 
-      /* Page footer strip */
+      /* Running footer — fixed to the bottom of the viewport/page so
+         Chrome repeats it identically on every printed page. The
+         .sheet padding-bottom above reserves matching space, so body
+         content can never overlap or be hidden behind it. */
       .page-footer {
-        margin-top: auto;
-        padding-top: 8mm;
-        border-top: 1px solid var(--warm);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--footer-h);
+        padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm);
+        border-top: 2px solid var(--gold);
+        background: var(--paper);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 9pt;
-        color: var(--muted);
+        font-size: 13pt;
+        color: var(--navy);
         font-family: var(--sans);
         letter-spacing: 0.04em;
       }
       .page-footer .agency-name {
-        font-weight: 600;
-        color: var(--navy);
-      }
-      .page-footer .pg {
+        font-weight: 700;
         color: var(--gold);
-        font-weight: 600;
       }
 
       /* ── Typography ─────────────────────────────────────────────────── */
@@ -148,21 +153,40 @@
       .divider {
         border: none;
         border-top: 1px solid var(--warm);
-        margin: 6mm 0;
+        margin: 3mm 0;
       }
       .divider-gold {
         border: none;
         border-top: 2px solid var(--gold);
         width: 20mm;
-        margin: 4mm 0 5mm;
+        margin: 3mm 0 4mm;
       }
 
       /* ── Sections ────────────────────────────────────────────────────── */
       .section {
-        margin-bottom: 7mm;
+        margin-bottom: 4mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .section:last-child {
         margin-bottom: 0;
+      }
+      /* Sections with tables/lists/grids are allowed to split naturally
+         across a page boundary to prevent large blank gaps. */
+      .section:has(table),
+      .section:has(.clause-list),
+      .section:has(.two-col),
+      .section:has(.three-col) {
+        break-inside: auto;
+      }
+      /* Small blocks keep their own cohesion */
+      .meta-bar,
+      .party-block,
+      .notes-box,
+      .summary-block,
+      .contact-panel {
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
 
       /* ── Two / Three column grids ────────────────────────────────────── */
@@ -227,6 +251,8 @@
         border: 1px solid var(--warm);
         border-radius: 3px;
         padding: 5mm 6mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .party-and {
         display: flex;
@@ -264,6 +290,7 @@
         border-radius: 3px;
         padding: 5mm 6mm;
         margin-top: 5mm;
+        break-inside: avoid-page;
       }
 
       /* ── Invoice items table ──────────────────────────────────────────── */
@@ -273,10 +300,13 @@
         font-size: 10.5pt;
         margin-top: 4mm;
       }
+      .invoice-table thead {
+        break-after: avoid;
+      }
       .invoice-table thead th {
         background: var(--navy);
         color: #fff;
-        padding: 3mm 4mm;
+        padding: 2.5mm 4mm;
         text-align: left;
         font-family: var(--sans);
         font-size: 8.5pt;
@@ -292,12 +322,13 @@
       }
       .invoice-table tbody tr {
         border-bottom: 1px solid var(--warm);
+        break-inside: avoid;
       }
       .invoice-table tbody tr:last-child {
         border-bottom: none;
       }
       .invoice-table tbody td {
-        padding: 4mm 4mm;
+        padding: 3.5mm 4mm;
         vertical-align: middle;
         color: var(--ink);
         font-size: 10.5pt;
@@ -320,6 +351,7 @@
         display: flex;
         flex-direction: column;
         align-items: flex-end;
+        break-inside: avoid-page;
       }
       .summary-row {
         display: flex;
@@ -425,11 +457,14 @@
       .contact-panel {
         background: var(--navy);
         border-radius: 3px;
-        padding: 6mm 7mm;
+        padding: 5mm 7mm;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 6mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+        break-before: avoid-page;
       }
       .contact-panel .tagline {
         font-family: var(--serif);
@@ -463,10 +498,11 @@
         border: 1px solid rgba(200, 150, 62, 0.25);
         border-radius: 3px;
         padding: 5mm 6mm;
-        font-size: 10pt;
-        color: var(--muted);
+        font-size: 10.5pt;
+        color: var(--gold);
         line-height: 1.65;
         font-style: italic;
+        break-inside: avoid-page;
       }
 
       /* ── Scope bar (left-accented info panel) ─────────────────────────── */
@@ -476,16 +512,15 @@
         border-radius: 3px;
         border-left: 3px solid var(--gold);
         margin-bottom: 5mm;
+        break-inside: avoid-page;
       }
 
       /* ── Responsive ──────────────────────────────────────────────────── */
+
       @media screen and (max-width: 768px) {
-        .page {
-          padding: 20px 15px 20px 25px;
-          height: auto;
-          min-height: auto;
+        .sheet {
+          padding: 20px 15px calc(var(--footer-h) + 20px) 25px;
           width: 100%;
-          margin-bottom: 20px;
         }
         .two-col,
         .three-col,
@@ -512,7 +547,9 @@
         .page-footer {
           flex-direction: column;
           align-items: flex-start;
-          gap: 10px;
+          gap: 4px;
+          height: auto;
+          position: static;
         }
         h1.display {
           font-size: 32pt;
@@ -533,41 +570,85 @@
         }
       }
 
-      /* ── Print ───────────────────────────────────────────────────────── */
+      /* ── A4 print geometry ────────────────────────────────────────────
+        Puppeteer PDF configuration reference (set in your pdf() call):
+        {
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '18mm', bottom: '20mm', left: '0', right: '0' },
+          footerTemplate: `
+            <div style="
+              width: 100%; font-family: Inter, sans-serif;
+              font-size: 19pt; color: #1a2233; letter-spacing: 0.04em;
+              display: flex; justify-content: space-between;
+              padding: 0 14mm 0 27mm; box-sizing: border-box; align-items: center;
+              border-top: 2px solid #c8963e;
+              background: #f7f5f0;
+            ">
+              <span><span style="font-weight:700;color:#c8963e;">{{AGENCY_NAME}}</span> · Confidential</span>
+              <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+            </div>`,
+          displayHeaderFooter: true,
+          headerTemplate: '<div style="width:100%;height:100%;background:#f7f5f0;"></div>'
+        }
+      */
       @page {
         size: A4;
-        margin: 0;
+        /* Background fills the entire page including margin strips.
+           This is the correct CSS way to paint the gutter areas in Puppeteer. */
+        background: #f7f5f0;
+        margin: 18mm 0 20mm 0;
       }
 
       @media print {
-        html,
-        body {
-          background: none;
+        html {
+          background: var(--paper) !important;
+          background-image: linear-gradient(
+            to right,
+            transparent 0px,
+            transparent 6mm,
+            var(--gold) 6mm,
+            var(--gold) calc(6mm + 5px),
+            transparent calc(6mm + 5px)
+          ) !important;
+          background-attachment: fixed !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
-        .page {
+        body {
+          background: transparent !important;
+        }
+        .side-bar {
+          display: none !important;
+        }
+        .sheet {
           width: var(--page-w);
-          height: var(--page-h);
           max-width: none;
           margin: 0;
-          padding: var(--pad-y) var(--pad-x) var(--pad-y)
-            calc(var(--pad-x) + var(--bar) + 8mm);
-          page-break-after: always;
-          break-after: page;
-          overflow: hidden;
+          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          background: transparent !important;
         }
-        .page:last-child {
-          page-break-after: avoid;
+        h2.section-title, h3.sub-title {
           break-after: avoid;
+        }
+        .page-footer {
+          display: none !important;
+        }
+        .section > .eyebrow + h2.section-title {
+          break-before: avoid;
+        }
+        .section:has(table),
+        .section:has(.clause-list),
+        .section:has(.two-col),
+        .section:has(.three-col) {
+          break-inside: auto !important;
         }
       }
     </style>
   </head>
   <body>
-
-    <!-- ═══════════════════════════════════════
-         PAGE 1 — COVER + PARTIES + LINE ITEMS
-    ════════════════════════════════════════ -->
-    <div class="page">
+    <div class="side-bar"></div>
+    <div class="sheet">
 
       <!-- Cover -->
       <div class="section" style="padding-top: 4mm;">
@@ -586,7 +667,19 @@
       <!-- Invoice Meta Bar -->
       <div class="section">
         <div class="meta-bar">
-          <div class="four-col">
+          <div class="two-col" style="margin-bottom: 4mm; align-items: center;">
+            <div class="info-block" style="margin: 0;">
+              <div class="label">Invoice Type</div>
+              <div class="value" style="font-size: 11pt;">
+                {{#if invoice.is_advance}}Advance Invoice{{else}}Final Invoice{{/if}}
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <span class="status-badge status-{{invoice.status_class}}">{{invoice.status_label}}</span>
+            </div>
+          </div>
+          <hr class="divider" style="margin: 0 0 4mm;" />
+          <div class="three-col">
             <div class="info-block" style="margin: 0;">
               <div class="label">Invoice No.</div>
               <div class="value">{{invoice.id}}</div>
@@ -598,12 +691,6 @@
             <div class="info-block" style="margin: 0;">
               <div class="label">Due Date</div>
               <div class="value">{{invoice.due_date}}</div>
-            </div>
-            <div class="info-block" style="margin: 0;">
-              <div class="label">Status</div>
-              <div class="value">
-                <span class="status-badge status-{{invoice.status_class}}">{{invoice.status_label}}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -697,22 +784,11 @@
         </div>
       </div>
 
-      <div class="page-footer">
-        <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
-        <span>{{client.business_name}} — Invoice {{invoice.id}}</span>
-        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
-      </div>
-    </div>
-
-
-    <!-- ═══════════════════════════════════════
-         PAGE 2 — PAYMENT INFO + NOTES + FOOTER
-    ════════════════════════════════════════ -->
-    <div class="page">
+      <hr class="divider" />
 
       <!-- Payment Information -->
       {{#if invoice.is_paid}}
-      <div class="section" style="padding-top: 4mm;">
+      <div class="section">
         <div class="eyebrow">Payment Information</div>
         <h2 class="section-title">Payment Received</h2>
 
@@ -727,18 +803,41 @@
             <div>
               <div class="info-block" style="margin: 0;">
                 <div class="label">Method</div>
-                <div class="value">{{#if invoice.paid_via}}{{invoice.paid_via}}{{else}}Confirmed by Studio{{/if}}</div>
+                <div class="value">{{#if invoice.payment.method}}{{invoice.payment.method}}{{else if invoice.paid_via}}{{invoice.paid_via}}{{else}}Confirmed by Studio{{/if}}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="callout-note">
-          <strong>Thank you.</strong> This invoice has been paid in full{{#if invoice.paid_via}} via {{invoice.paid_via}}{{/if}}. No further action is required from you — we'll keep this on file for our records.
+        <!-- Transaction details — only rendered when payment data exists.
+             The Invoice Number is never replaced by this block: the two
+             identifiers serve different purposes and both appear in
+             their own place throughout this document. -->
+        {{#if invoice.payment}}
+        <div class="meta-bar" style="margin-top: 4mm;">
+          <div class="three-col">
+            <div class="info-block" style="margin: 0;">
+              <div class="label">Transaction ID</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.payment.transaction_id}}</div>
+            </div>
+            <div class="info-block" style="margin: 0;">
+              <div class="label">Payment Date</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.payment.date}}</div>
+            </div>
+            <div class="info-block" style="margin: 0;">
+              <div class="label">Amount Received</div>
+              <div class="value" style="font-size: 10.5pt;">{{invoice.currency}} {{invoice.total}}</div>
+            </div>
+          </div>
+        </div>
+        {{/if}}
+
+        <div class="callout-note" style="margin-top: 4mm;">
+          <strong>Thank you.</strong> This invoice has been paid in full{{#if invoice.payment.method}} via {{invoice.payment.method}}{{else if invoice.paid_via}} via {{invoice.paid_via}}{{/if}}. No further action is required from you — we'll keep this on file for our records.
         </div>
       </div>
       {{else}}
-      <div class="section" style="padding-top: 4mm;">
+      <div class="section">
         <div class="eyebrow">Payment Information</div>
         <h2 class="section-title">How to Pay</h2>
 
@@ -840,21 +939,33 @@
       <div class="page-footer">
         <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
         <span>{{client.business_name}} — Invoice {{invoice.id}}</span>
-        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
       </div>
     </div>
 
-  </body>
   <script>
-    (function () {
-      var pages = document.querySelectorAll(".page");
-      var total = pages.length;
-      pages.forEach(function (page, idx) {
-        var nums = page.querySelectorAll(".pg-num");
-        var tots = page.querySelectorAll(".pg-tot");
-        nums.forEach(function (el) { el.textContent = String(idx + 1).padStart(2, "0"); });
-        tots.forEach(function (el) { el.textContent = String(total).padStart(2, "0"); });
-      });
+    /* ── Shared PDF utility: ISO date → "19 June 2026" ─────────────────
+       Runs after Handlebars templating, before Puppeteer snapshot.
+    ──────────────────────────────────────────────────────────────────── */
+    (function() {
+      const MONTHS = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December'
+      ];
+      function walkAndFormat(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const txt = node.textContent;
+          const replaced = txt.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, function(_, y, mo, d) {
+            const day = parseInt(d, 10);
+            const month = MONTHS[parseInt(mo, 10) - 1];
+            return day + ' ' + month + ' ' + y;
+          });
+          if (replaced !== txt) node.textContent = replaced;
+        } else if (node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+          node.childNodes.forEach(walkAndFormat);
+        }
+      }
+      walkAndFormat(document.body);
     })();
   </script>
+</body>
 </html>

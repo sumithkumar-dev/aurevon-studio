@@ -7,6 +7,7 @@ import { normalise } from "./documents";
 import type { Client, ClientDocument, DocumentType } from "../types";
 import type { WorkspacePayload, WorkspaceMilestone } from "./workspace";
 import { suggestClientAction } from "./workspace";
+import { getCurrencySymbol } from "./currency";
 
 // ─── Validation ──────────────────────────────────────────────────────────────
 //
@@ -17,42 +18,87 @@ type Rule = { label: string; ok: (c: Client, w: WorkspacePayload) => boolean };
 
 const RULES: Record<DocumentType, Rule[]> = {
   Proposal: [
-    { label: "Business name",       ok: (c) => !!c.business_name?.trim() },
-    { label: "Contact name",        ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim() },
-    { label: "Contact email",       ok: (c) => !!(c.primary_contact_email ?? c.email)?.trim() },
-    { label: "Contact phone",       ok: (c) => !!(c.primary_contact_phone ?? c.phone)?.trim() },
-    { label: "Project summary",     ok: (_, w) => !!(w.summary ?? "").trim() },
-    { label: "At least one goal",   ok: (_, w) => w.goals.length > 0 },
-    { label: "At least one deliverable", ok: (_, w) => w.deliverables.length > 0 },
-    { label: "At least one timeline phase", ok: (_, w) => w.timeline.length > 0 },
-    { label: "At least one pricing item",   ok: (_, w) => w.pricing_items.length > 0 },
-    { label: "Total price",         ok: (c, w) => !!(w.total_price ?? c.final_price) },
-    { label: "Project start date",  ok: (c) => !!c.project_start_date?.trim() },
-    { label: "Project launch date", ok: (c) => !!(c.project_end_date ?? c.delivery_date)?.trim() },
+    { label: "Business name", ok: (c) => !!c.business_name?.trim() },
+    {
+      label: "Contact name",
+      ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim(),
+    },
+    {
+      label: "Contact email",
+      ok: (c) => !!(c.primary_contact_email ?? c.email)?.trim(),
+    },
+    {
+      label: "Contact phone",
+      ok: (c) => !!(c.primary_contact_phone ?? c.phone)?.trim(),
+    },
+    { label: "Project summary", ok: (_, w) => !!(w.summary ?? "").trim() },
+    { label: "At least one goal", ok: (_, w) => w.goals.length > 0 },
+    {
+      label: "At least one deliverable",
+      ok: (_, w) => w.deliverables.length > 0,
+    },
+    {
+      label: "At least one timeline phase",
+      ok: (_, w) => w.timeline.length > 0,
+    },
+    {
+      label: "At least one pricing item",
+      ok: (_, w) => w.pricing_items.length > 0,
+    },
+    { label: "Total price", ok: (c, w) => !!(w.total_price ?? c.final_price) },
+    { label: "Project start date", ok: (c) => !!c.project_start_date?.trim() },
+    {
+      label: "Project launch date",
+      ok: (c) => !!(c.project_end_date ?? c.delivery_date)?.trim(),
+    },
   ],
   Agreement: [
-    { label: "Business name",      ok: (c) => !!c.business_name?.trim() },
-    { label: "Contact name",       ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim() },
-    { label: "Client location",    ok: (_, w) => !!w.location?.trim() },
+    { label: "Business name", ok: (c) => !!c.business_name?.trim() },
+    {
+      label: "Contact name",
+      ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim(),
+    },
+    { label: "Client location", ok: (_, w) => !!w.location?.trim() },
     { label: "Project start date", ok: (c) => !!c.project_start_date?.trim() },
   ],
   Invoice: [
-    { label: "Business name",   ok: (c) => !!c.business_name?.trim() },
-    { label: "Contact name",    ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim() },
-    { label: "Contact email",   ok: (c) => !!(c.primary_contact_email ?? c.email)?.trim() },
-    { label: "Contact phone",   ok: (c) => !!(c.primary_contact_phone ?? c.phone)?.trim() },
+    { label: "Business name", ok: (c) => !!c.business_name?.trim() },
+    {
+      label: "Contact name",
+      ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim(),
+    },
+    {
+      label: "Contact email",
+      ok: (c) => !!(c.primary_contact_email ?? c.email)?.trim(),
+    },
+    {
+      label: "Contact phone",
+      ok: (c) => !!(c.primary_contact_phone ?? c.phone)?.trim(),
+    },
     { label: "Client location", ok: (_, w) => !!w.location?.trim() },
-    { label: "At least one milestone or pricing item", ok: (_, w) => w.milestones.length > 0 || w.pricing_items.length > 0 },
-    { label: "Total price",     ok: (c, w) => !!(w.total_price ?? c.final_price) },
+    {
+      label: "At least one milestone or pricing item",
+      ok: (_, w) => w.milestones.length > 0 || w.pricing_items.length > 0,
+    },
+    { label: "Total price", ok: (c, w) => !!(w.total_price ?? c.final_price) },
   ],
   Handover: [
-    { label: "Business name",    ok: (c) => !!c.business_name?.trim() },
-    { label: "Contact name",     ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim() },
-    { label: "Project summary",  ok: (_, w) => !!(w.summary ?? "").trim() },
-    { label: "Project launch date", ok: (c) => !!(c.project_end_date ?? c.delivery_date)?.trim() },
-    { label: "At least one deliverable", ok: (_, w) => w.deliverables.length > 0 },
-    { label: "Website URL",      ok: (c) => !!c.business_website?.trim() },
-    { label: "Domain provider",  ok: (_, w) => !!w.domain_provider?.trim() },
+    { label: "Business name", ok: (c) => !!c.business_name?.trim() },
+    {
+      label: "Contact name",
+      ok: (c) => !!(c.primary_contact_name ?? c.client_name)?.trim(),
+    },
+    { label: "Project summary", ok: (_, w) => !!(w.summary ?? "").trim() },
+    {
+      label: "Project launch date",
+      ok: (c) => !!(c.project_end_date ?? c.delivery_date)?.trim(),
+    },
+    {
+      label: "At least one deliverable",
+      ok: (_, w) => w.deliverables.length > 0,
+    },
+    { label: "Website URL", ok: (c) => !!c.business_website?.trim() },
+    { label: "Domain provider", ok: (_, w) => !!w.domain_provider?.trim() },
     { label: "Hosting provider", ok: (_, w) => !!w.hosting_provider?.trim() },
   ],
 };
@@ -86,7 +132,9 @@ function fmt(v: number | null | undefined): string {
 
 function today(): string {
   return new Date().toLocaleDateString("en-IN", {
-    day: "numeric", month: "long", year: "numeric",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
@@ -94,14 +142,67 @@ function dueDate(daysFromNow: number): string {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
   return d.toLocaleDateString("en-IN", {
-    day: "numeric", month: "long", year: "numeric",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
-function stableId(prefix: string, clientId: string): string {
-  // Use last 6 chars of UUID (after stripping dashes) — collision-resistant enough
-  // for a single-agency CRM with hundreds of clients, not thousands.
+/**
+ * Formats a stored ISO date string ("YYYY-MM-DD") into a client-readable
+ * format ("19 Jun 2026"). Returns an empty string for null/undefined/invalid
+ * inputs so template rendering gracefully shows nothing rather than "Invalid Date".
+ * All document builders must route stored dates through this function — never
+ * pass raw ISO strings into templates directly.
+ */
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  // Accept both "YYYY-MM-DD" and full ISO timestamp strings.
+  const d = new Date(iso.includes("T") ? iso : iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * Calculates a human-readable duration string from two ISO date strings.
+ * Returns values like "3 Days", "1 Week", "2 Weeks", "3–4 Weeks".
+ * Falls back to the raw start–end string if dates are invalid, so nothing
+ * is ever blank in the PDF.
+ */
+function timelineDuration(
+  start: string | null | undefined,
+  end: string | null | undefined,
+): string {
+  if (!start || !end) return "";
+  const s = new Date(start.includes("T") ? start : start + "T00:00:00");
+  const e = new Date(end.includes("T") ? end : end + "T00:00:00");
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return "";
+  const diffDays = Math.round(
+    (e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  if (diffDays <= 0) return "1 Day";
+  if (diffDays === 1) return "1 Day";
+  if (diffDays < 7) return `${diffDays} Days`;
+  const weeks = diffDays / 7;
+  if (weeks <= 1) return "1 Week";
+  if (weeks <= 1.5) return "1–2 Weeks";
+  if (weeks <= 2) return "2 Weeks";
+  if (weeks <= 2.5) return "2–3 Weeks";
+  if (weeks <= 3) return "3 Weeks";
+  if (weeks <= 3.5) return "3–4 Weeks";
+  if (weeks <= 4) return "4 Weeks";
+  const months = Math.round(weeks / 4.33);
+  return months <= 1 ? "1 Month" : `${months} Months`;
+}
+
+// for a single-agency CRM with hundreds of clients, not thousands.
+function generateInvoiceNumber(clientId: string, prefix = "INV"): string {
   const hash = clientId.replace(/-/g, "").slice(-6).toUpperCase();
+
   return `${prefix}-${new Date().getFullYear()}-${hash}`;
 }
 
@@ -112,7 +213,10 @@ export function getOrCreateDocId(
   existingMetadata: Record<string, unknown>,
 ): string {
   const key = `${prefix.toLowerCase()}_id`;
-  if (typeof existingMetadata[key] === "string" && (existingMetadata[key] as string).length > 0) {
+  if (
+    typeof existingMetadata[key] === "string" &&
+    (existingMetadata[key] as string).length > 0
+  ) {
     return existingMetadata[key] as string;
   }
   return stableId(prefix, clientId);
@@ -125,7 +229,10 @@ type Ctx = Record<string, unknown>;
 function resolve(path: string, stack: Ctx[]): unknown {
   let depth = 0;
   let p = path.trim();
-  while (p.startsWith("../")) { depth++; p = p.slice(3); }
+  while (p.startsWith("../")) {
+    depth++;
+    p = p.slice(3);
+  }
   const ctx = stack[Math.max(0, stack.length - 1 - depth)];
   if (!ctx) return undefined;
   if (p === "this") return ctx[""] ?? ctx;
@@ -172,11 +279,13 @@ type Node =
 
 function tokenize(tpl: string): Token[] {
   const tokens: Token[] = [];
-  const tagRe = /\{\{(#each\s+[^}]+|#if\s+[^}]+|else|\/each|\/if|[^#/][^}]*)\}\}/g;
+  const tagRe =
+    /\{\{(#each\s+[^}]+|#if\s+[^}]+|else|\/each|\/if|[^#/][^}]*)\}\}/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = tagRe.exec(tpl))) {
-    if (m.index > last) tokens.push({ kind: "text", value: tpl.slice(last, m.index) });
+    if (m.index > last)
+      tokens.push({ kind: "text", value: tpl.slice(last, m.index) });
     const raw = m[1];
     if (raw.startsWith("#each")) {
       tokens.push({ kind: "open-each", path: raw.slice(5).trim() });
@@ -199,7 +308,11 @@ function tokenize(tpl: string): Token[] {
 
 /** Consume tokens (via the shared cursor) into a node list, stopping at any
  * token kind named in `stopAt` (left unconsumed so the caller can inspect it). */
-function parseNodes(tokens: Token[], cursor: { i: number }, stopAt: Token["kind"][]): Node[] {
+function parseNodes(
+  tokens: Token[],
+  cursor: { i: number },
+  stopAt: Token["kind"][],
+): Node[] {
   const nodes: Node[] = [];
   while (cursor.i < tokens.length && !stopAt.includes(tokens[cursor.i].kind)) {
     const tok = tokens[cursor.i++];
@@ -250,7 +363,9 @@ function renderNodes(nodes: Node[], stack: Ctx[]): string {
       if (Array.isArray(arr) && arr.length) {
         for (const item of arr) {
           const itemCtx: Ctx =
-            item != null && typeof item === "object" ? (item as Ctx) : { "": item };
+            item != null && typeof item === "object"
+              ? (item as Ctx)
+              : { "": item };
           out += renderNodes(node.body, [...stack, itemCtx]);
         }
       }
@@ -302,7 +417,11 @@ function sharedBase(client: Client, workspace: WorkspacePayload) {
   };
 }
 
-function buildProposalData(client: Client, workspace: WorkspacePayload, proposalId: string) {
+function buildProposalData(
+  client: Client,
+  workspace: WorkspacePayload,
+  proposalId: string,
+) {
   const base = sharedBase(client, workspace);
   const total = workspace.total_price ?? client.final_price ?? null;
   return {
@@ -316,43 +435,57 @@ function buildProposalData(client: Client, workspace: WorkspacePayload, proposal
       pages_count: workspace.pages_count ?? "",
       revision_rounds: client.revision_count ?? 0,
       support_days: workspace.support_days ?? "",
-      start_date: client.project_start_date ?? "",
-      launch_date: client.project_end_date ?? client.delivery_date ?? "",
+      start_date: formatDate(client.project_start_date),
+      launch_date: formatDate(client.project_end_date ?? client.delivery_date),
       assumptions: [] as string[],
-      has_scope_content: (
+      has_scope_content:
         workspace.deliverables.length > 0 ||
         workspace.exclusions.length > 0 ||
-        workspace.timeline.length > 0
-      ),
+        workspace.timeline.length > 0,
     },
     scope: {
-      deliverables: workspace.deliverables.map((d) => ({ icon: "⬡", title: d, items: [] as string[] })),
+      deliverables: workspace.deliverables.map((d) => ({
+        icon: "⬡",
+        title: d,
+        items: [] as string[],
+      })),
       exclusions: workspace.exclusions,
     },
     process: {
       steps: [
-        { title: "Discovery",   description: "Requirements gathering", active: true  },
-        { title: "Design",      description: "Wireframes and mockups",  active: false },
-        { title: "Development", description: "Website build",           active: false },
-        { title: "Launch",      description: "Deployment & Go live",    active: false },
+        {
+          title: "Discovery",
+          description: "Requirements gathering",
+          active: true,
+        },
+        {
+          title: "Design",
+          description: "Wireframes and mockups",
+          active: false,
+        },
+        { title: "Development", description: "Website build", active: false },
+        { title: "Launch", description: "Deployment & Go live", active: false },
       ],
     },
     timeline: workspace.timeline.map((t) => ({
       phase: t.phase,
-      duration: [t.start, t.end].filter(Boolean).join(" – "),
+      duration: timelineDuration(t.start, t.end),
       description: t.notes ?? "",
       client_action: t.client_action ?? suggestClientAction(t.phase),
     })),
     pricing: {
-      currency: workspace.currency ?? "INR",
+      currency: getCurrencySymbol(workspace.currency),
       total: fmt(total),
       extra_revision_charge: fmt(workspace.extra_revision_charge),
       payment_methods: "UPI & Bank Transfer",
       payment_terms_days: 7,
       late_payment_days: 14,
       items: workspace.pricing_items.map((it) => ({
-        name: it.label, description: "", frequency: "One-Time",
-        price: fmt(it.amount), highlight: false,
+        name: it.label,
+        description: "",
+        frequency: "One-Time",
+        price: fmt(it.amount),
+        highlight: false,
       })),
       payments: workspace.milestones.map((m, idx) => {
         const base2 = total && total > 0 ? total : 1;
@@ -370,18 +503,38 @@ function buildProposalData(client: Client, workspace: WorkspacePayload, proposal
       date_iso: new Date().toISOString().slice(0, 10),
       validity_days: agency.legal.proposal_valid_days,
       estimated_total_time: workspace.timeline.length
-        ? `${workspace.timeline.length * 2} Weeks` : "2 Weeks",
+        ? `${workspace.timeline.length * 2} Weeks`
+        : "2 Weeks",
       next_steps: [
-        { title: "Review & Approve",   description: "Look over the deliverables, scope, and timeline." },
-        { title: "Sign the Agreement", description: "We will send a brief digital agreement to formalise our partnership." },
-        { title: "Submit Advance",     description: "Process the initial deposit to secure your spot." },
-        { title: "Project Kickoff",    description: "We'll send an onboarding checklist to collect your content." },
+        {
+          title: "Review & Approve",
+          description: "Look over the deliverables, scope, and timeline.",
+        },
+        {
+          title: "Sign the Agreement",
+          description:
+            "We will send a brief digital agreement to formalise our partnership.",
+        },
+        {
+          title: "Submit Advance",
+          description: "Process the initial deposit to secure your spot.",
+        },
+        {
+          title: "Project Kickoff",
+          description:
+            "We'll send an onboarding checklist to collect your content.",
+        },
       ],
     },
   };
 }
 
-function buildAgreementData(client: Client, workspace: WorkspacePayload, agreementId: string, proposalId: string) {
+function buildAgreementData(
+  client: Client,
+  workspace: WorkspacePayload,
+  agreementId: string,
+  proposalId: string,
+) {
   const base = sharedBase(client, workspace);
   return {
     ...base,
@@ -392,8 +545,8 @@ function buildAgreementData(client: Client, workspace: WorkspacePayload, agreeme
       proposal_id: proposalId,
     },
     project: {
-      start_date: client.project_start_date ?? "",
-      launch_date: client.project_end_date ?? client.delivery_date ?? "",
+      start_date: formatDate(client.project_start_date),
+      launch_date: formatDate(client.project_end_date ?? client.delivery_date),
       pages_count: workspace.pages_count ?? "",
       revision_rounds: client.revision_count ?? 0,
       support_days: workspace.support_days ?? "",
@@ -432,14 +585,19 @@ function buildInvoiceData(
   }
 
   // If no milestones at all, fall back to pricing items
-  const lineItems = items.length > 0
-    ? items.map((m) => ({ name: m.label, price: fmt(m.amount) }))
-    : workspace.pricing_items.map((it) => ({ name: it.label, price: fmt(it.amount) }));
+  const lineItems =
+    items.length > 0
+      ? items.map((m) => ({ name: m.label, price: fmt(m.amount) }))
+      : workspace.pricing_items.map((it) => ({
+          name: it.label,
+          price: fmt(it.amount),
+        }));
 
   // Subtotal = sum of the items actually shown (not a hardcoded first-item only)
-  const subtotalAmount = items.length > 0
-    ? items.reduce((s, m) => s + m.amount, 0)
-    : workspace.pricing_items.reduce((s, it) => s + it.amount, 0);
+  const subtotalAmount =
+    items.length > 0
+      ? items.reduce((s, m) => s + m.amount, 0)
+      : workspace.pricing_items.reduce((s, it) => s + it.amount, 0);
 
   // Remaining = total minus what's shown in this invoice
   const shownAmount = subtotalAmount;
@@ -450,7 +608,8 @@ function buildInvoiceData(
   // and fall back to the client-level payment_status dropdown for invoices
   // built straight from pricing_items (no milestones at all).
   const itemsAllPaid = items.length > 0 && items.every((m) => m.paid);
-  const isPaid = itemsAllPaid ||
+  const isPaid =
+    itemsAllPaid ||
     client.payment_status === "Fully Paid" ||
     (invoiceType === "advance" && client.payment_status === "Advance Paid");
   const statusLabel = isPaid ? "Paid" : "Pending";
@@ -467,9 +626,11 @@ function buildInvoiceData(
   // template — so an advance invoice and a final invoice never share wording
   // that only makes sense for one of them.
   const contextHeading =
-    invoiceType === "advance" ? "Advance Payment" :
-    invoiceType === "final" ? "Final Payment" :
-    "Payment Due";
+    invoiceType === "advance"
+      ? "Advance Payment"
+      : invoiceType === "final"
+        ? "Final Payment"
+        : "Payment Due";
   const contextText =
     invoiceType === "advance"
       ? "This invoice covers the advance payment required before project commencement. Work begins only after this payment is received and confirmed."
@@ -486,9 +647,9 @@ function buildInvoiceData(
       due_date: dueDate(7),
       proposal_id: proposalId,
       agreement_id: agreementId,
-      currency: workspace.currency ?? "INR",
+      currency: getCurrencySymbol(workspace.currency),
       project_name: client.project_name ?? "Website Design & Development",
-      start_date: client.project_start_date ?? "",
+      start_date: formatDate(client.project_start_date),
       advance_label: invoiceLabel,
       context_heading: contextHeading,
       context_text: contextText,
@@ -506,11 +667,18 @@ function buildInvoiceData(
   };
 }
 
-function buildHandoverData(client: Client, workspace: WorkspacePayload, agreementId: string) {
+function buildHandoverData(
+  client: Client,
+  workspace: WorkspacePayload,
+  agreementId: string,
+) {
   const base = sharedBase(client, workspace);
   const pricingItems = workspace.pricing_items.map((it) => ({
-    name: it.label, description: it.description ?? "", frequency: it.frequency ?? "One-Time",
-    price: fmt(it.amount), highlight: it.highlight ?? false,
+    name: it.label,
+    description: it.description ?? "",
+    frequency: it.frequency ?? "One-Time",
+    price: fmt(it.amount),
+    highlight: it.highlight ?? false,
   }));
   return {
     ...base,
@@ -518,11 +686,13 @@ function buildHandoverData(client: Client, workspace: WorkspacePayload, agreemen
       date_iso: new Date().toISOString().slice(0, 10),
     },
     project: {
-      understanding: { summary: workspace.summary ?? client.project_description ?? "" },
-      launch_date: client.project_end_date ?? client.delivery_date ?? "",
+      understanding: {
+        summary: workspace.summary ?? client.project_description ?? "",
+      },
+      launch_date: formatDate(client.project_end_date ?? client.delivery_date),
     },
     pricing: {
-      currency: workspace.currency ?? "INR",
+      currency: getCurrencySymbol(workspace.currency),
       has_maintenance: pricingItems.some((it) => it.highlight),
       items: pricingItems,
     },
@@ -530,7 +700,9 @@ function buildHandoverData(client: Client, workspace: WorkspacePayload, agreemen
       domain_provider: workspace.domain_provider ?? "",
       hosting_provider: workspace.hosting_provider ?? "",
       website_url: client.business_website ?? "",
-      support_period: workspace.support_days ? `${workspace.support_days} days` : "",
+      support_period: workspace.support_days
+        ? `${workspace.support_days} days`
+        : "",
       assets_delivered: workspace.deliverables,
     },
     agreement: {
@@ -543,10 +715,10 @@ function buildHandoverData(client: Client, workspace: WorkspacePayload, agreemen
 // ─── Template & data selector ────────────────────────────────────────────────
 
 const TEMPLATES: Record<DocumentType, string> = {
-  Proposal:  proposalTemplate,
+  Proposal: proposalTemplate,
   Agreement: agreementTemplate,
-  Invoice:   invoiceTemplate,
-  Handover:  handoverTemplate,
+  Invoice: invoiceTemplate,
+  Handover: handoverTemplate,
 };
 
 function buildData(
@@ -557,9 +729,12 @@ function buildData(
   invoiceType: "advance" | "final" | "unified" = "advance",
 ): Record<string, unknown> {
   // Resolve stable IDs from persisted metadata, or create new stable ones
-  const proposalMeta = existingDocs.find((d) => d.doc_type === "Proposal")?.metadata ?? {};
-  const agreementMeta = existingDocs.find((d) => d.doc_type === "Agreement")?.metadata ?? {};
-  const invoiceMeta = existingDocs.find((d) => d.doc_type === "Invoice")?.metadata ?? {};
+  const proposalMeta =
+    existingDocs.find((d) => d.doc_type === "Proposal")?.metadata ?? {};
+  const agreementMeta =
+    existingDocs.find((d) => d.doc_type === "Agreement")?.metadata ?? {};
+  const invoiceMeta =
+    existingDocs.find((d) => d.doc_type === "Invoice")?.metadata ?? {};
 
   const proposalId = getOrCreateDocId("PRO", client.id, proposalMeta);
   const agreementId = getOrCreateDocId("AGR", client.id, agreementMeta);
@@ -567,65 +742,136 @@ function buildData(
 
   switch (docType) {
     case "Proposal":
-      return buildProposalData(client, workspace, proposalId) as Record<string, unknown>;
+      return buildProposalData(client, workspace, proposalId) as Record<
+        string,
+        unknown
+      >;
     case "Agreement":
-      return buildAgreementData(client, workspace, agreementId, proposalId) as Record<string, unknown>;
+      return buildAgreementData(
+        client,
+        workspace,
+        agreementId,
+        proposalId,
+      ) as Record<string, unknown>;
     case "Invoice":
-      return buildInvoiceData(client, workspace, invoiceId, proposalId, agreementId, invoiceType) as Record<string, unknown>;
+      return buildInvoiceData(
+        client,
+        workspace,
+        invoiceId,
+        proposalId,
+        agreementId,
+        invoiceType,
+      ) as Record<string, unknown>;
     case "Handover":
-      return buildHandoverData(client, workspace, agreementId) as Record<string, unknown>;
+      return buildHandoverData(client, workspace, agreementId) as Record<
+        string,
+        unknown
+      >;
   }
 }
 
-// ─── PDF via print window ────────────────────────────────────────────────────
+// ─── PDF via Puppeteer ───────────────────────────────────────────────────────
 //
-// Opens the rendered HTML in a hidden iframe, triggers window.print().
-// The browser's Save as PDF option handles the rest — no server, no library.
+// Architecture:
+//   Handlebars HTML template
+//     → rendered HTML string (built here, in-browser)
+//     → POST to pdf-server (Express + Puppeteer, localhost:3001)
+//     → PDF bytes returned
+//     → auto-downloaded in the browser
+//
+// No Chrome print dialog. No "Save as PDF" step. Puppeteer provides:
+//   • Reliable A4 pagination with proper break-inside/break-before/break-after
+//   • Native header/footer support (displayHeaderFooter + footerTemplate)
+//   • Consistent margins on every machine
+//   • Real "Page X of Y" via Puppeteer's built-in <span class="pageNumber"> tokens
 
-export function generateAndPrint(
+const PDF_SERVER_URL =
+  (import.meta.env.VITE_PDF_SERVER_URL as string | undefined) ??
+  "http://localhost:3001";
+
+/** Maps document types to human-readable file names for the download. */
+function pdfFilename(
+  docType: DocumentType,
+  client: Client,
+  invoiceType: "advance" | "final" | "unified",
+): string {
+  const slug = (client.business_name ?? client.client_name ?? "client")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  switch (docType) {
+    case "Proposal":
+      return `${slug}-proposal.pdf`;
+    case "Agreement":
+      return `${slug}-agreement.pdf`;
+    case "Invoice":
+      return `${slug}-invoice-${invoiceType}.pdf`;
+    case "Handover":
+      return `${slug}-handover.pdf`;
+  }
+}
+
+/**
+ * Renders the document template to HTML, sends it to the Puppeteer PDF server,
+ * and triggers an automatic browser download of the resulting PDF.
+ *
+ * Throws if the server is unreachable or returns an error — the caller
+ * (doGenerate in ClientWorkspace) will surface the error to the user.
+ */
+export async function generateAndPrint(
   docType: DocumentType,
   client: Client,
   workspace: WorkspacePayload,
   existingDocs: ClientDocument[] = [],
   invoiceType: "advance" | "final" | "unified" = "advance",
-): void {
+): Promise<void> {
+  // 1. Build the data context and render to HTML (runs entirely in-browser,
+  //    same as before — no change to the template/rendering pipeline).
   const data = buildData(docType, client, workspace, existingDocs, invoiceType);
   const html = render(TEMPLATES[docType], [data as Ctx]);
 
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText =
-    "position:fixed;top:0;left:0;width:0;height:0;border:0;opacity:0;pointer-events:none;";
-  document.body.appendChild(iframe);
+  const filename = pdfFilename(docType, client, invoiceType);
 
-  const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document;
-  if (!iframeDoc) {
-    document.body.removeChild(iframe);
-    throw new Error("Could not open print frame.");
-  }
+  // 2. POST the rendered HTML to the Puppeteer server.
+  const response = await fetch(`${PDF_SERVER_URL}/generate-pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ html, filename }),
+  });
 
-  iframeDoc.open();
-  iframeDoc.write(html);
-  iframeDoc.close();
-
-  let printed = false;
-  function doPrint() {
-    if (printed) return;
-    printed = true;
+  if (!response.ok) {
+    // Try to surface a meaningful error from the server
+    let detail = "";
     try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } finally {
-      // Remove iframe after dialog closes (or after 2 min fallback)
-      setTimeout(() => {
-        if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      }, 120_000);
+      const body = (await response.json()) as {
+        error?: string;
+        detail?: string;
+      };
+      detail = body.detail ?? body.error ?? "";
+    } catch {
+      // ignore parse error — the raw status is enough
     }
+    throw new Error(
+      `PDF server error (HTTP ${response.status})${detail ? ": " + detail : ""}. ` +
+        `Ensure the pdf-server is running: node server/pdf-server.js`,
+    );
   }
 
-  // Try load event first, fall back to a timeout for fonts/images
-  // 1200ms gives Google Fonts time to load inside the iframe before printing
-  iframe.onload = () => setTimeout(doPrint, 1200);
-  setTimeout(doPrint, 3000);
+  // 3. Receive PDF bytes and trigger an automatic browser download.
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+
+  // Clean up the object URL after a short delay
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 2000);
 }
-
-

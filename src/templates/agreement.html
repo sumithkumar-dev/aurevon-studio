@@ -36,64 +36,71 @@
         --page-w: 210mm;
         --page-h: 297mm;
         --pad-x: 14mm;
-        --pad-y: 12mm;
+        --pad-y: 18mm;
         --bar: 5px;
+        --footer-h: 16mm; /* reserved space for the repeating footer */
       }
 
       html,
       body {
-        background: #d0cfc9;
+        background: var(--paper);
         font-family: var(--sans);
         color: var(--ink);
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
 
-      /* ── Page shell ─────────────────────────────────────────────────── */
-      .page {
+      /* ── Document shell ────────────────────────────────────────────────
+         One continuous flowing column instead of fixed-height page
+         buckets. Puppeteer paginates this naturally, so content can
+         never be clipped and never forced into an awkward break.
+         Left padding accounts for gold bar (5px) + 8mm gap + base (14mm).
+         Bottom padding reserves space for the screen footer; @page margin
+         handles bottom spacing in print. ─────────────────────────────── */
+      .sheet {
         position: relative;
         width: var(--page-w);
-        height: var(--page-h);
+        margin: 0 auto;
         background: var(--paper);
-        margin: 0 auto 20px;
-        padding: var(--pad-y) var(--pad-x) var(--pad-y)
+        padding: var(--pad-y) var(--pad-x) calc(var(--footer-h) + 14mm)
           calc(var(--pad-x) + var(--bar) + 8mm);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
       }
 
-      /* Gold left bookmark bar */
-      .page::before {
-        content: "";
-        position: absolute;
-        left: 0;
+      /* Gold left bookmark bar — fixed so it repeats on every printed
+         page without depending on per-page wrapper divs. */
+      .side-bar {
+        position: fixed;
+        left: 6mm;
         top: 0;
         bottom: 0;
         width: var(--bar);
         background: var(--gold);
       }
 
-      /* Page footer strip */
+      /* Running footer — fixed to the bottom of the viewport/page so
+         Chrome repeats it identically on every printed page. The
+         .sheet padding-bottom above reserves matching space, so body
+         content can never overlap or be hidden behind it. */
       .page-footer {
-        margin-top: auto;
-        padding-top: 8mm;
-        border-top: 1px solid var(--warm);
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--footer-h);
+        padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm);
+        border-top: 2px solid var(--gold);
+        background: var(--paper);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 9pt;
-        color: var(--muted);
+        font-size: 13pt;
+        color: var(--navy);
         font-family: var(--sans);
         letter-spacing: 0.04em;
       }
       .page-footer .agency-name {
-        font-weight: 600;
-        color: var(--navy);
-      }
-      .page-footer .pg {
+        font-weight: 700;
         color: var(--gold);
-        font-weight: 600;
       }
 
       /* ── Typography ─────────────────────────────────────────────────── */
@@ -148,21 +155,41 @@
       .divider {
         border: none;
         border-top: 1px solid var(--warm);
-        margin: 6mm 0;
+        margin: 3mm 0;
       }
       .divider-gold {
         border: none;
         border-top: 2px solid var(--gold);
         width: 20mm;
-        margin: 4mm 0 5mm;
+        margin: 3mm 0 4mm;
       }
 
       /* ── Sections ────────────────────────────────────────────────────── */
       .section {
-        margin-bottom: 7mm;
+        margin-bottom: 4mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .section:last-child {
         margin-bottom: 0;
+      }
+      /* Long sections (lists of clauses, tables, multi-card grids) are
+         allowed to split naturally across a page boundary — forcing a
+         whole legal section onto one page would create large blank gaps. */
+      .section:has(.clause-list),
+      .section:has(table),
+      .section:has(.exclusion-list),
+      .section:has(.three-col),
+      .section:has(.understanding-panel) {
+        break-inside: auto;
+      }
+      /* Small blocks keep their own internal cohesion */
+      .party-block,
+      .deliverable-card,
+      .understanding-panel,
+      .contact-panel {
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
 
       /* ── Two / Three column grids ────────────────────────────────────── */
@@ -199,8 +226,10 @@
       .understanding-panel {
         background: var(--navy);
         border-radius: 3px;
-        padding: 6mm 7mm;
+        padding: 5mm 6mm;
         color: #fff;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .understanding-panel .eyebrow {
         color: var(--gold-lt);
@@ -247,8 +276,8 @@
         column-gap: 6mm;
       }
       .exclusion-list li {
-        font-size: 10pt;
-        color: var(--muted);
+        font-size: 10.5pt;
+        color: var(--gold);
         padding-left: 4.5mm;
         position: relative;
         margin-bottom: 1.5mm;
@@ -269,7 +298,9 @@
         border: 1px solid var(--warm);
         border-top: 3px solid var(--gold);
         border-radius: 3px;
-        padding: 5mm;
+        padding: 4.5mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .deliverable-card .icon {
         font-size: 14pt;
@@ -282,8 +313,8 @@
         margin-top: 2mm;
       }
       .deliverable-card ul li {
-        font-size: 10pt;
-        color: var(--muted);
+        font-size: 10.5pt;
+        color: var(--gold);
         padding-left: 3.5mm;
         position: relative;
         margin-bottom: 1.5mm;
@@ -350,6 +381,8 @@
         border: 1px solid var(--warm);
         border-radius: 3px;
         padding: 5mm 6mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
       }
       .party-and {
         display: flex;
@@ -368,6 +401,7 @@
         grid-template-columns: 1fr 1fr;
         gap: 10mm;
         margin-top: 4mm;
+        break-inside: avoid-page;
       }
       .sig-block {
         display: flex;
@@ -399,8 +433,8 @@
         color: var(--muted);
       }
       .sig-intro {
-        font-size: 10pt;
-        color: var(--muted);
+        font-size: 10.5pt;
+        color: var(--gold);
         font-style: italic;
         line-height: 1.6;
         margin-bottom: 5mm;
@@ -414,6 +448,12 @@
         width: 100%;
         border-collapse: collapse;
         font-size: 10pt;
+      }
+      .timeline-table tr {
+        break-inside: avoid;
+      }
+      .timeline-table thead {
+        break-after: avoid;
       }
       .timeline-table thead th {
         background: var(--navy);
@@ -445,11 +485,14 @@
       .contact-panel {
         background: var(--navy);
         border-radius: 3px;
-        padding: 6mm 7mm;
+        padding: 5mm 7mm;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 4mm;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+        break-before: avoid-page;
       }
       .contact-panel .tagline {
         font-family: var(--serif);
@@ -483,6 +526,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        break-inside: avoid-page;
       }
       .approval-methods-card .method-item {
         font-size: 10pt;
@@ -506,22 +550,21 @@
         border-radius: 3px;
         padding: 5mm 6mm;
         margin-top: 5mm;
+        break-inside: avoid-page;
       }
 
       /* ── Responsive / print ──────────────────────────────────────────── */
+
       @media screen and (max-width: 1024px) {
-        .page {
+        .sheet {
           width: 100%;
           max-width: var(--page-w);
         }
       }
 
       @media screen and (max-width: 768px) {
-        .page {
-          padding: 20px 15px 20px 25px;
-          height: auto;
-          min-height: auto;
-          margin-bottom: 20px;
+        .sheet {
+          padding: 20px 15px calc(var(--footer-h) + 20px) 25px;
         }
         .two-col, .three-col {
           grid-template-columns: 1fr;
@@ -538,40 +581,95 @@
         .contact-panel { flex-direction: column; align-items: flex-start; }
         .contact-panel .tagline { max-width: 100%; }
         .contact-details { text-align: left; }
-        .page-footer { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .page-footer { flex-direction: column; align-items: flex-start; gap: 4px; height: auto; position: static; }
         h1.display { font-size: 32pt; }
         h2.section-title { font-size: 18pt; }
       }
 
+      /* ── A4 print geometry ────────────────────────────────────────────
+        Puppeteer PDF configuration reference (set in your pdf() call):
+        {
+          format: 'A4',
+          printBackground: true,
+          margin: { top: '18mm', bottom: '20mm', left: '0', right: '0' },
+          footerTemplate: `
+            <div style="
+              width: 100%; font-family: Inter, sans-serif;
+              font-size: 19pt; color: #1a2233; letter-spacing: 0.04em;
+              display: flex; justify-content: space-between;
+              padding: 0 14mm 0 27mm; box-sizing: border-box; align-items: center;
+              border-top: 2px solid #c8963e;
+              background: #f7f5f0;
+            ">
+              <span><span style="font-weight:700;color:#c8963e;">{{AGENCY_NAME}}</span> · Confidential</span>
+              <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+            </div>`,
+          displayHeaderFooter: true,
+          headerTemplate: '<div style="width:100%;height:100%;background:#f7f5f0;"></div>'
+        }
+      */
       @page {
         size: A4;
-        margin: 0;
+        /* Background fills the entire page including margin strips.
+           This is the correct CSS way to paint the gutter areas in Puppeteer. */
+        background: #f7f5f0;
+        /* top: 18mm content clearance on every page (incl. page 2+)
+           bottom: 20mm reserved for Puppeteer footerTemplate
+           left: 0 so gold bar background bleeds to edge
+           right: 0 (content padding via --pad-x handles right spacing) */
+        margin: 18mm 0 20mm 0;
       }
 
       @media print {
-        html, body { background: none; }
-        .page {
+        html {
+          background: var(--paper) !important;
+          background-image: linear-gradient(
+            to right,
+            transparent 0px,
+            transparent 6mm,
+            var(--gold) 6mm,
+            var(--gold) calc(6mm + 5px),
+            transparent calc(6mm + 5px)
+          ) !important;
+          background-attachment: fixed !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body {
+          background: transparent !important;
+        }
+        .side-bar {
+          display: none !important;
+        }
+        .sheet {
           width: var(--page-w);
-          height: var(--page-h);
           max-width: none;
           margin: 0;
-          padding: var(--pad-y) var(--pad-x) var(--pad-y)
-            calc(var(--pad-x) + var(--bar) + 8mm);
-          page-break-after: always;
-          break-after: page;
-          overflow: hidden;
-        }
-        .page:last-child {
-          page-break-after: avoid;
-          break-after: avoid;
+          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          background: transparent !important;
         }
         .table-responsive { overflow-x: visible; }
+        h2.section-title, h3.sub-title {
+          break-after: avoid;
+        }
+        .page-footer {
+          display: none !important;
+        }
+        .section > .eyebrow + h2.section-title {
+          break-before: avoid;
+        }
+        .section:has(.clause-list),
+        .section:has(table),
+        .section:has(.exclusion-list),
+        .section:has(.three-col) {
+          break-inside: auto !important;
+        }
       }
     </style>
   </head>
   <body>
-
-    <div class="page">
+    <div class="side-bar"></div>
+    <div class="sheet">
 
       <div class="section" style="padding-top: 4mm">
         <div class="eyebrow">Client Agreement</div>
@@ -681,15 +779,7 @@
         </div>
       </div>
 
-      <div class="page-footer">
-        <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
-        <span>{{client.business_name}} — Client Agreement</span>
-        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
-      </div>
-    </div>
-
-
-    <div class="page">
+      <hr class="divider" />
 
       <div class="section">
         <div class="eyebrow">Section 01</div>
@@ -795,15 +885,7 @@
         </ul>
       </div>
 
-      <div class="page-footer">
-        <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
-        <span>{{client.business_name}} — Client Agreement</span>
-        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
-      </div>
-    </div>
-
-
-    <div class="page">
+      <hr class="divider" />
 
       <div class="section">
         <div class="eyebrow">Section 05</div>
@@ -929,22 +1011,34 @@
 
       <div class="page-footer">
         <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
-        <span>{{client.business_name}} — Client Agreement</span>
-        <span class="pg"><span class="pg-num"></span> / <span class="pg-tot"></span></span>
+        <span>{{client.business_name}} — Client Agreement · {{agreement.id}}</span>
       </div>
     </div>
 
-  </body>
   <script>
-    (function () {
-      var pages = document.querySelectorAll(".page");
-      var total = pages.length;
-      pages.forEach(function (page, idx) {
-        var nums = page.querySelectorAll(".pg-num");
-        var tots = page.querySelectorAll(".pg-tot");
-        nums.forEach(function (el) { el.textContent = String(idx + 1).padStart(2, "0"); });
-        tots.forEach(function (el) { el.textContent = String(total).padStart(2, "0"); });
-      });
+    /* ── Shared PDF utility: ISO date → "19 June 2026" ─────────────────
+       Runs after Handlebars templating, before Puppeteer snapshot.
+    ──────────────────────────────────────────────────────────────────── */
+    (function() {
+      const MONTHS = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December'
+      ];
+      function walkAndFormat(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const txt = node.textContent;
+          const replaced = txt.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, function(_, y, mo, d) {
+            const day = parseInt(d, 10);
+            const month = MONTHS[parseInt(mo, 10) - 1];
+            return day + ' ' + month + ' ' + y;
+          });
+          if (replaced !== txt) node.textContent = replaced;
+        } else if (node.nodeName !== 'SCRIPT' && node.nodeName !== 'STYLE') {
+          node.childNodes.forEach(walkAndFormat);
+        }
+      }
+      walkAndFormat(document.body);
     })();
   </script>
+</body>
 </html>
