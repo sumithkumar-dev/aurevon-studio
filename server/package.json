@@ -7,11 +7,11 @@
   },
   "scripts": {
     "start": "node pdf-server.js",
-    "build": "npx puppeteer browsers install chrome || echo 'Puppeteer Chrome install failed, will use system Chrome'"
+    "build": "node -e \"console.log('Build complete — using system Chromium, no download needed')\""
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "puppeteer": "^22.0.0"
+    "puppeteer-core": "^22.0.0"
   }
 }
