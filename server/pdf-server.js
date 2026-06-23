@@ -17,7 +17,7 @@
  */
 
 import express from "express";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import cors from "cors";
 import { existsSync } from "fs";
 
@@ -101,8 +101,7 @@ app.post("/generate-pdf", async (req, res) => {
 
   let browser;
   try {
-    browser = await puppeteer.launch({
-      executablePath,
+    browser = await puppeteer.launch({,
       headless: true,
       args: [
         "--no-sandbox",
