@@ -57,6 +57,28 @@ export type WorkspacePayload = {
 
 const WORKSPACE_TAG = "__workspace";
 
+/**
+ * Returns true only when terms_notes contains a fully valid workspace JSON
+ * envelope — i.e. it starts with "{" AND contains the __workspace tag.
+ *
+ * This is the single source of truth for "has this client been saved before?"
+ * Used in ClientWorkspace to decide whether to apply default values or trust
+ * the saved data as-is.  The previous check (startsWith("{") only) was wrong:
+ * it returned true for any JSON object, including ones without the tag that
+ * parseWorkspace would silently convert to emptyWorkspace().
+ */
+export function hasWorkspaceTag(termsNotes: string | null | undefined): boolean {
+  if (!termsNotes) return false;
+  const trimmed = termsNotes.trim();
+  if (!trimmed.startsWith("{")) return false;
+  try {
+    const r = JSON.parse(trimmed) as Record<string, unknown>;
+    return r[WORKSPACE_TAG] === 1 || r[WORKSPACE_TAG] === true;
+  } catch {
+    return false;
+  }
+}
+
 export function emptyWorkspace(): WorkspacePayload {
   return {
     contact_title: null,

@@ -62,6 +62,7 @@ import {
   type WorkspacePayload,
   type WorkspacePricingItem,
   type WorkspaceTimelineEntry,
+  hasWorkspaceTag,
 } from "../lib/workspace";
 import { formatCurrency, CURRENCY_OPTIONS } from "../lib/currency";
 
@@ -622,14 +623,15 @@ export function ClientWorkspace({
 
   const [workspace, setWorkspace] = useState<WorkspacePayload>(() => {
     const parsed = parseWorkspace(client.terms_notes);
-    // Only apply defaults when there is no saved workspace JSON yet.
-    // Once a workspace has been saved (terms_notes starts with { and has the
-    // __workspace tag), the parsed data IS the source of truth — never
-    // overwrite it with auto-generated defaults.
-    const alreadySaved =
-      typeof client.terms_notes === "string" &&
-      client.terms_notes.trim().startsWith("{");
-    return alreadySaved ? parsed : applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed));
+    // hasWorkspaceTag checks for BOTH valid JSON AND the __workspace:1 tag.
+    // The previous startsWith("{") check was insufficient — any JSON object
+    // would pass it, but parseWorkspace requires the tag to return real data.
+    // Without the tag, parseWorkspace returns emptyWorkspace() (milestones:[]),
+    // and skipping applyWorkspaceDefaults would render a blank workspace.
+    if (hasWorkspaceTag(client.terms_notes)) {
+      return parsed;  // Saved data — trust it completely, no defaults
+    }
+    return applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed));
   });
   // Re-initialize ONLY when switching to a different client (client.id changes).
   // Must NOT depend on client.terms_notes — every patchWorkspace call updates
@@ -638,12 +640,11 @@ export function ClientWorkspace({
   // after initial mount.
   useEffect(() => {
     const parsed = parseWorkspace(client.terms_notes);
-    const alreadySaved =
-      typeof client.terms_notes === "string" &&
-      client.terms_notes.trim().startsWith("{");
-    setWorkspace(
-      alreadySaved ? parsed : applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed)),
-    );
+    if (hasWorkspaceTag(client.terms_notes)) {
+      setWorkspace(parsed);  // Saved data — trust it completely, no defaults
+    } else {
+      setWorkspace(applyWorkspaceDefaults(parsed, buildWorkspaceSeed(parsed)));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client.id]);  // client.id only — never client.terms_notes
   // Save status indicator (Saving / Saved / Error) for edits made in this workspace.
@@ -721,14 +722,15 @@ export function ClientWorkspace({
     }
   }
 
-  // Auto-save defaults the first time the workspace is opened with an empty
-  // terms_notes (so next open doesn't re-generate and overwrite user edits).
+  // Auto-save defaults the FIRST time a brand-new client is opened (no saved
+  // workspace JSON yet). Uses hasWorkspaceTag — the same check as the init
+  // above — so the condition is consistent and never fires on clients that
+  // already have saved data, preventing overwrite of user edits.
   useEffect(() => {
-    if (!client.terms_notes || !client.terms_notes.trim().startsWith("{")) {
-      // Persist the generated defaults so they're stored and editable
+    if (!hasWorkspaceTag(client.terms_notes)) {
       handlePatch({ terms_notes: serializeWorkspace(workspace) });
     }
-    // Only run on mount / client change
+    // Only run on mount / client change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client.id]);
 
