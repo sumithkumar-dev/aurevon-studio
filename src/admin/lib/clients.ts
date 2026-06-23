@@ -127,11 +127,34 @@ export async function updateClient(
   id: string,
   patch: ClientPatch,
 ): Promise<void> {
-  const { error } = await supabase
+  // Use .select() so Supabase returns the affected rows.
+  // Without .select(), a silent RLS block or wrong id returns
+  // { error: null, data: null } — no error thrown, 0 rows written.
+  // With .select() + checking data.length we detect that case.
+  const { data, error } = await supabase
     .from(CLIENTS_TABLE)
     .update(patch)
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    console.error("[updateClient] Supabase error:", error.message, { id, patch });
+    throw new Error(error.message);
+  }
+
+  if (!data || data.length === 0) {
+    // RLS blocked the update, or no row with this id exists.
+    // Log exactly what was attempted so you can diagnose in browser console.
+    console.error(
+      "[updateClient] 0 rows updated — RLS may be blocking writes, " +
+      "or the clients table is missing columns. id:", id,
+      "patch keys:", Object.keys(patch),
+    );
+    throw new Error(
+      "Save failed: no rows updated. Check Supabase RLS policies and that " +
+      "all columns exist (terms_notes, remaining_amount, etc)."
+    );
+  }
 }
 
 export async function deleteClient(id: string): Promise<void> {

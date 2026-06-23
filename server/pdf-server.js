@@ -37,21 +37,27 @@ app.post("/generate-pdf", async (req, res) => {
 
   let browser;
   try {
+    // Resolve Chrome path — tries Puppeteer's own cache first, then
+    // falls back to system Chrome (useful if Render pre-installs it).
+    let executablePath;
+    try {
+      executablePath = puppeteer.executablePath();
+      console.log("[pdf-server] Chrome path:", executablePath);
+    } catch (e) {
+      console.warn("[pdf-server] executablePath() failed, letting Puppeteer auto-detect:", e.message);
+      executablePath = undefined;
+    }
+
     browser = await puppeteer.launch({
-      headless: true,
-      // executablePath tells Puppeteer exactly where Chrome is.
-      // On Render (and any server), the postinstall/build step runs
-      // `npx puppeteer browsers install chrome` which puts Chrome in
-      // the Puppeteer cache. executablePath() reads that cache path
-      // correctly on every platform — no hardcoded paths needed.
-      executablePath: puppeteer.executablePath(),
+      headless: "new",
+      ...(executablePath ? { executablePath } : {}),
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-gpu",
-        "--single-process",          // Required on Render free tier (limited memory)
-        "--no-zygote",               // Pairs with single-process for stability
+        "--single-process",
+        "--no-zygote",
       ],
     });
 
