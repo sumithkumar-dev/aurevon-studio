@@ -29,10 +29,12 @@ const PORT = process.env.PORT ?? 3001;
 // apt-get install chromium         → /usr/bin/chromium
 // CHROME_PATH env var on Render dashboard overrides everything.
 const SYSTEM_CHROME_PATHS = [
+  process.env.CHROME_PATH,
   "/usr/bin/chromium-browser",
   "/usr/bin/chromium",
   "/usr/bin/google-chrome-stable",
   "/usr/bin/google-chrome",
+  "/opt/render/project/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome",
   "/snap/bin/chromium",
 ];
 
@@ -45,7 +47,7 @@ function findChrome() {
   // 2. Walk known system paths
   for (const p of SYSTEM_CHROME_PATHS) {
     if (existsSync(p)) {
-      console.log("[pdf-server] Found system Chrome at:", p);
+      console.log("[pdf-server] Found Chrome at:", p);
       return p;
     }
   }
