@@ -101,7 +101,7 @@ app.post("/generate-pdf", async (req, res) => {
 
   let browser;
   try {
-    browser = await puppeteer.launch({,
+    browser = await puppeteer.launch({
       headless: true,
       args: [
         "--no-sandbox",
