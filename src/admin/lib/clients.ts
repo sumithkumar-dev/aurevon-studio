@@ -22,8 +22,7 @@ function normalise(row: Record<string, unknown>): Client {
     industry: (row.industry as string) ?? "",
     source: ((row.source as Client["source"]) ?? "Website") as Client["source"],
     final_budget: (row.final_budget as string | null) ?? null,
-    quoted_price:
-      row.quoted_price == null ? null : Number(row.quoted_price),
+    quoted_price: row.quoted_price == null ? null : Number(row.quoted_price),
     final_price: row.final_price == null ? null : Number(row.final_price),
     advance_paid: Number(row.advance_paid ?? 0),
     remaining_amount: Number(row.remaining_amount ?? 0),
@@ -131,14 +130,18 @@ export async function updateClient(
   // Without .select(), a silent RLS block or wrong id returns
   // { error: null, data: null } — no error thrown, 0 rows written.
   // With .select() + checking data.length we detect that case.
+  const { remaining_amount, ...safePatch } = patch;
   const { data, error } = await supabase
     .from(CLIENTS_TABLE)
-    .update(patch)
+    .update(safePatch)
     .eq("id", id)
     .select("id");
 
   if (error) {
-    console.error("[updateClient] Supabase error:", error.message, { id, patch });
+    console.error("[updateClient] Supabase error:", error.message, {
+      id,
+      patch,
+    });
     throw new Error(error.message);
   }
 
@@ -147,12 +150,14 @@ export async function updateClient(
     // Log exactly what was attempted so you can diagnose in browser console.
     console.error(
       "[updateClient] 0 rows updated — RLS may be blocking writes, " +
-      "or the clients table is missing columns. id:", id,
-      "patch keys:", Object.keys(patch),
+        "or the clients table is missing columns. id:",
+      id,
+      "patch keys:",
+      Object.keys(patch),
     );
     throw new Error(
       "Save failed: no rows updated. Check Supabase RLS policies and that " +
-      "all columns exist (terms_notes, remaining_amount, etc)."
+        "all columns exist (terms_notes, remaining_amount, etc).",
     );
   }
 }
@@ -163,7 +168,9 @@ export async function deleteClient(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function fetchClientNotes(clientId: string): Promise<ClientNote[]> {
+export async function fetchClientNotes(
+  clientId: string,
+): Promise<ClientNote[]> {
   const { data, error } = await supabase
     .from(NOTES_TABLE)
     .select("*")
