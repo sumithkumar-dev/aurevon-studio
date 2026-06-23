@@ -2,14 +2,12 @@
  * pdf-server.js
  *
  * Express PDF generation server
- * Uses puppeteer + chrome-headless-shell installed on Render
+ * Uses Puppeteer installed browser on Render
  */
 
 import express from "express";
 import puppeteer from "puppeteer";
 import cors from "cors";
-import { existsSync, readdirSync } from "fs";
-import path from "path";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -17,45 +15,18 @@ const PORT = process.env.PORT ?? 3001;
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-// Find Puppeteer downloaded Chrome Headless Shell
-function getChromePath() {
-  const base = "/opt/render/.cache/puppeteer/chrome-headless-shell";
-  if (!existsSync(base)) {
-    console.log("[pdf-server] chrome cache folder missing:", base);
-    return null;
-  }
-  const folders = readdirSync(base);
-  if (!folders.length) {
-    console.log("[pdf-server] no chrome folders found");
-    return null;
-  }
-  const chromePath = path.join(
-    base,
-    folders[0],
-    "chrome-headless-shell-linux64",
-    "chrome-headless-shell"
-  );
-  console.log("[pdf-server] checking chrome:", chromePath);
-  if (existsSync(chromePath)) {
-    console.log("[pdf-server] chrome found");
-    return chromePath;
-  }
-  console.log("[pdf-server] chrome executable missing");
-  return null;
-}
-
 app.post("/generate-pdf", async (req, res) => {
   const { html, filename = "document.pdf" } = req.body ?? {};
+
   if (!html || typeof html !== "string") {
     return res.status(400).json({ error: "Missing html" });
   }
 
   let browser;
+
   try {
-    const chromePath = getChromePath();
-    console.log("[pdf-server] launching browser:", chromePath);
+    console.log("[pdf-server] launching puppeteer");
     browser = await puppeteer.launch({
-      executablePath: chromePath || undefined,
       headless: true,
       args: [
         "--no-sandbox",
@@ -68,6 +39,7 @@ app.post("/generate-pdf", async (req, res) => {
     });
 
     const page = await browser.newPage();
+
     await page.setContent(html, {
       waitUntil: "networkidle0",
       timeout: 30000
@@ -79,7 +51,7 @@ app.post("/generate-pdf", async (req, res) => {
       document.documentElement.style.setProperty("print-color-adjust", "exact", "important");
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -105,13 +77,13 @@ app.post("/generate-pdf", async (req, res) => {
         ">
         <span>Aurevon Studios — Confidential</span>
         <span>
-        Page
-        <span class="pageNumber"></span>
-        of
-        <span class="totalPages"></span>
+          Page
+          <span class="pageNumber"></span>
+          of
+          <span class="totalPages"></span>
         </span>
         </div>
-        `
+      `
     });
 
     res.set({
@@ -119,6 +91,7 @@ app.post("/generate-pdf", async (req, res) => {
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Content-Length": pdfBuffer.length
     });
+
     res.end(pdfBuffer);
   } catch (err) {
     console.error("[pdf-server] PDF error:", err);
@@ -134,10 +107,7 @@ app.post("/generate-pdf", async (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({
-    ok: true,
-    chrome: getChromePath()
-  });
+  res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
