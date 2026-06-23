@@ -37,15 +37,48 @@ app.post("/generate-pdf", async (req, res) => {
 
   let browser;
   try {
-    // Resolve Chrome path — tries Puppeteer's own cache first, then
-    // falls back to system Chrome (useful if Render pre-installs it).
-    let executablePath;
-    try {
-      executablePath = puppeteer.executablePath();
-      console.log("[pdf-server] Chrome path:", executablePath);
-    } catch (e) {
-      console.warn("[pdf-server] executablePath() failed, letting Puppeteer auto-detect:", e.message);
-      executablePath = undefined;
+    // Chrome path resolution — works on Render free tier without needing
+    // to download Chrome. Priority:
+    // 1. CHROME_PATH env var (set this on Render dashboard if needed)
+    // 2. Puppeteer's own downloaded Chrome (if build script ran)
+    // 3. System Chromium at known Render/Linux paths
+    const SYSTEM_CHROME_PATHS = [
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/google-chrome",
+      "/usr/bin/chromium-browser",
+      "/usr/bin/chromium",
+      "/snap/bin/chromium",
+    ];
+
+    let executablePath = process.env.CHROME_PATH || undefined;
+
+    if (!executablePath) {
+      try {
+        const puppeteerPath = puppeteer.executablePath();
+        // executablePath() throws if Chrome was never downloaded
+        const { existsSync } = await import("fs");
+        if (puppeteerPath && existsSync(puppeteerPath)) {
+          executablePath = puppeteerPath;
+          console.log("[pdf-server] Using Puppeteer Chrome:", executablePath);
+        }
+      } catch {
+        console.log("[pdf-server] Puppeteer Chrome not found, trying system paths");
+      }
+    }
+
+    if (!executablePath) {
+      const { existsSync } = await import("fs");
+      for (const p of SYSTEM_CHROME_PATHS) {
+        if (existsSync(p)) {
+          executablePath = p;
+          console.log("[pdf-server] Using system Chrome:", executablePath);
+          break;
+        }
+      }
+    }
+
+    if (!executablePath) {
+      console.log("[pdf-server] No Chrome found at known paths, letting Puppeteer auto-detect");
     }
 
     browser = await puppeteer.launch({
@@ -161,6 +194,40 @@ app.post("/generate-pdf", async (req, res) => {
 
 // Health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Chrome diagnostic endpoint — visit /chrome-check to see exactly what
+// Chrome path Puppeteer resolves to and whether it exists on disk.
+app.get("/chrome-check", async (_req, res) => {
+  const { existsSync } = await import("fs");
+  const SYSTEM_PATHS = [
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/snap/bin/chromium",
+  ];
+
+  let puppeteerPath = null;
+  let puppeteerExists = false;
+  try {
+    puppeteerPath = puppeteer.executablePath();
+    puppeteerExists = existsSync(puppeteerPath);
+  } catch (e) {
+    puppeteerPath = "error: " + e.message;
+  }
+
+  const systemPaths = SYSTEM_PATHS.map(p => ({ path: p, exists: existsSync(p) }));
+  const envPath = process.env.CHROME_PATH || null;
+
+  res.json({
+    puppeteer_path: puppeteerPath,
+    puppeteer_exists: puppeteerExists,
+    env_CHROME_PATH: envPath,
+    system_paths: systemPaths,
+    cache_dir: process.env.PUPPETEER_CACHE_DIR || "/opt/render/.cache/puppeteer",
+    node_version: process.version,
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`✅ pdf-server listening on http://localhost:${PORT}`);
