@@ -6,7 +6,7 @@
  */
 
 import express from "express";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import cors from "cors";
 import { existsSync } from "fs";
 
@@ -27,18 +27,18 @@ app.post("/generate-pdf", async (req, res) => {
 
   try {
     console.log("[pdf-server] launching chromium");
-    browser = await puppeteer.launch({
-      executablePath: "/usr/bin/chromium",
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",
-        "--no-zygote"
-      ]
-    });
+    // REPLACE the entire browser = await puppeteer.launch({...}) block with:
+browser = await puppeteer.launch({
+  headless: true,
+  args: [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--single-process",
+    "--no-zygote"
+  ]
+});
 
     const page = await browser.newPage();
 
