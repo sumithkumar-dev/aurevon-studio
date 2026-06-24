@@ -2,11 +2,11 @@
  * pdf-server.js
  *
  * Express PDF generation server
- * Uses Puppeteer installed browser on Render
+ * Uses puppeteer-core + system Chromium on Render
  */
 
 import express from "express";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
 import cors from "cors";
 
 const app = express();
@@ -25,8 +25,9 @@ app.post("/generate-pdf", async (req, res) => {
   let browser;
 
   try {
-    console.log("[pdf-server] launching puppeteer");
+    console.log("[pdf-server] launching chromium");
     browser = await puppeteer.launch({
+      executablePath: "/usr/bin/chromium",
       headless: true,
       args: [
         "--no-sandbox",
@@ -57,33 +58,16 @@ app.post("/generate-pdf", async (req, res) => {
       format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
-      margin: {
-        top: "18mm",
-        bottom: "22mm",
-        left: "0",
-        right: "0"
-      },
+      margin: { top: "18mm", bottom: "22mm", left: "0", right: "0" },
       displayHeaderFooter: true,
       headerTemplate: "<span></span>",
       footerTemplate: `
-        <div style="
-          width:100%;
-          font-family:Arial;
-          font-size:11px;
-          color:#c8963e;
-          padding:0 15mm;
-          display:flex;
-          justify-content:space-between;
-        ">
-        <span>Aurevon Studios — Confidential</span>
-        <span>
-          Page
-          <span class="pageNumber"></span>
-          of
-          <span class="totalPages"></span>
-        </span>
-        </div>
-      `
+        <div style="width:100%; font-family:Arial; font-size:11px; color:#c8963e; padding:0 15mm; display:flex; justify-content:space-between;">
+          <span>Aurevon Studios — Confidential</span>
+          <span>
+            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+          </span>
+        </div>`
     });
 
     res.set({
@@ -107,7 +91,10 @@ app.post("/generate-pdf", async (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    browser: "/usr/bin/chromium"
+  });
 });
 
 app.listen(PORT, () => {
