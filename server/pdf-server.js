@@ -2,13 +2,15 @@
  * pdf-server.js
  *
  * Express PDF generation server
- * Uses puppeteer-core + system Chromium on Render
+ * Uses puppeteer + system Chromium on Render
  */
 
 import express from "express";
 import puppeteer from "puppeteer";
 import cors from "cors";
 import { existsSync } from "fs";
+import { join } from "path";
+import os from "os";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -27,7 +29,6 @@ app.post("/generate-pdf", async (req, res) => {
 
   try {
     console.log("[pdf-server] launching chromium");
-    // REPLACE the entire browser = await puppeteer.launch({...}) block with:
 browser = await puppeteer.launch({
   headless: true,
   args: [
@@ -91,21 +92,23 @@ browser = await puppeteer.launch({
   }
 });
 
-app.get("/health", (_req,res)=>{
+app.get("/health", (_req, res) => {
+  const cacheDir = process.env.PUPPETEER_CACHE_DIR || join(os.homedir(), ".cache", "puppeteer");
 
-  const paths = [
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "/usr/bin/google-chrome",
-    "/usr/bin/google-chrome-stable"
-  ];
+  let cacheContents = [];
+  let cacheExists = false;
+  try {
+    cacheContents = readdirSync(cacheDir);
+    cacheExists = true;
+  } catch (e) {
+    cacheContents = [e.message];
+  }
 
   res.json({
-    ok:true,
-    paths: paths.map(p => ({
-      path:p,
-      exists: existsSync(p)
-    }))
+    ok: true,
+    puppeteerCacheDir: cacheDir,
+    cacheExists,
+    cacheContents
   });
 });
 
