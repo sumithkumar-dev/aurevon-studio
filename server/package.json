@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node pdf-server.js",
-    "build": "node -e \"require('fs').rmSync(process.env.PUPPETEER_CACHE_DIR || require('os').homedir() + '/.cache/puppeteer', {recursive:true,force:true})\" && npx puppeteer browsers install chrome"
+    "build": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "cors": "^2.8.5",
