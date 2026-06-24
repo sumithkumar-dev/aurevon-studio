@@ -8,6 +8,7 @@
 import express from "express";
 import puppeteer from "puppeteer-core";
 import cors from "cors";
+import { existsSync } from "fs";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -90,10 +91,21 @@ app.post("/generate-pdf", async (req, res) => {
   }
 });
 
-app.get("/health", (_req, res) => {
+app.get("/health", (_req,res)=>{
+
+  const paths = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable"
+  ];
+
   res.json({
-    ok: true,
-    browser: "/usr/bin/chromium"
+    ok:true,
+    paths: paths.map(p => ({
+      path:p,
+      exists: existsSync(p)
+    }))
   });
 });
 
