@@ -8,7 +8,7 @@
 import express from "express";
 import puppeteer from "puppeteer";
 import cors from "cors";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import os from "os";
 
