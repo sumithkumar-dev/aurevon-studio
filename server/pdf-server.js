@@ -111,7 +111,27 @@ app.get("/health", (_req, res) => {
     cacheContents
   });
 });
-
+app.get("/find-chrome", (_req, res) => {
+  import("child_process").then(({ execSync }) => {
+    let result = {};
+    try {
+      result.which = execSync("which google-chrome || which chromium || which chrome || echo not_found").toString().trim();
+    } catch(e) {
+      result.which = "error: " + e.message;
+    }
+    try {
+      result.find = execSync("find /opt/render -name 'chrome' -type f 2>/dev/null | head -5").toString().trim();
+    } catch(e) {
+      result.find = "error: " + e.message;
+    }
+    try {
+      result.home = execSync("find $HOME/.cache/puppeteer -name 'chrome' -type f 2>/dev/null | head -5").toString().trim();
+    } catch(e) {
+      result.home = "error: " + e.message;
+    }
+    res.json(result);
+  });
+});
 app.listen(PORT, () => {
   console.log(`✅ pdf-server running on port ${PORT}`);
 });
