@@ -1040,5 +1040,20 @@
       walkAndFormat(document.body);
     })();
   </script>
+
+  <!-- Auto-print: triggered when this tab is opened by the CRM -->
+  <script>
+    (function () {
+      if (!window.__aurevonPrint) return;
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          window.print();
+          window.addEventListener('afterprint', function () {
+            window.close();
+          });
+        }, 600);
+      });
+    })();
+  </script>
 </body>
 </html>

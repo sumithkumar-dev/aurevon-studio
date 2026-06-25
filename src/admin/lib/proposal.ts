@@ -770,54 +770,23 @@ function buildData(
   }
 }
 
-// ─── PDF via Puppeteer ───────────────────────────────────────────────────────
+// ─── PDF via window.print() ──────────────────────────────────────────────────
 //
 // Architecture:
 //   Handlebars HTML template
 //     → rendered HTML string (built here, in-browser)
-//     → POST to pdf-server (Express + Puppeteer, localhost:3001)
-//     → PDF bytes returned
-//     → auto-downloaded in the browser
+//     → Blob URL opened in a new tab
+//     → tab auto-calls window.print() via the __aurevonPrint flag
+//     → user's browser renders and saves the PDF
+//     → tab closes itself after the print dialog is dismissed
 //
-// No Chrome print dialog. No "Save as PDF" step. Puppeteer provides:
-//   • Reliable A4 pagination with proper break-inside/break-before/break-after
-//   • Native header/footer support (displayHeaderFooter + footerTemplate)
-//   • Consistent margins on every machine
-//   • Real "Page X of Y" via Puppeteer's built-in <span class="pageNumber"> tokens
-
-const PDF_SERVER_URL =
-  (import.meta.env.VITE_PDF_SERVER_URL as string | undefined) ??
-  "http://localhost:3001";
-
-/** Maps document types to human-readable file names for the download. */
-function pdfFilename(
-  docType: DocumentType,
-  client: Client,
-  invoiceType: "advance" | "final" | "unified",
-): string {
-  const slug = (client.business_name ?? client.client_name ?? "client")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  switch (docType) {
-    case "Proposal":
-      return `${slug}-proposal.pdf`;
-    case "Agreement":
-      return `${slug}-agreement.pdf`;
-    case "Invoice":
-      return `${slug}-invoice-${invoiceType}.pdf`;
-    case "Handover":
-      return `${slug}-handover.pdf`;
-  }
-}
+// No server required. The user's own browser does all rendering.
 
 /**
- * Renders the document template to HTML, sends it to the Puppeteer PDF server,
- * and triggers an automatic browser download of the resulting PDF.
+ * Renders the document template to HTML, opens it in a new browser tab,
+ * and auto-triggers window.print() so the user can save it as PDF.
  *
- * Throws if the server is unreachable or returns an error — the caller
- * (doGenerate in ClientWorkspace) will surface the error to the user.
+ * The tab closes itself automatically after the print dialog is dismissed.
  */
 export async function generateAndPrint(
   docType: DocumentType,
@@ -826,52 +795,30 @@ export async function generateAndPrint(
   existingDocs: ClientDocument[] = [],
   invoiceType: "advance" | "final" | "unified" = "advance",
 ): Promise<void> {
-  // 1. Build the data context and render to HTML (runs entirely in-browser,
-  //    same as before — no change to the template/rendering pipeline).
+  // 1. Build the data context and render to HTML (entirely in-browser).
   const data = buildData(docType, client, workspace, existingDocs, invoiceType);
   const html = render(TEMPLATES[docType], [data as Ctx]);
 
-  const filename = pdfFilename(docType, client, invoiceType);
+  // 2. Inject the __aurevonPrint flag so the template's auto-print script fires.
+  //    We splice it in just before </head> so it runs before any other scripts.
+  const htmlWithFlag = html.replace(
+    "</head>",
+    "<script>window.__aurevonPrint = true;<\/script></head>",
+  );
 
-  // 2. POST the rendered HTML to the Puppeteer server.
-  const response = await fetch(`${PDF_SERVER_URL}/generate-pdf`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ html, filename }),
-  });
-
-  if (!response.ok) {
-    // Try to surface a meaningful error from the server
-    let detail = "";
-    try {
-      const body = (await response.json()) as {
-        error?: string;
-        detail?: string;
-      };
-      detail = body.detail ?? body.error ?? "";
-    } catch {
-      // ignore parse error — the raw status is enough
-    }
-    throw new Error(
-      `PDF server error (HTTP ${response.status})${detail ? ": " + detail : ""}. ` +
-        `Ensure the pdf-server is running: node server/pdf-server.js`,
-    );
-  }
-
-  // 3. Receive PDF bytes and trigger an automatic browser download.
-  const blob = await response.blob();
+  // 3. Create a Blob URL and open it in a new tab. The tab's auto-print script
+  //    calls window.print() after fonts load, then window.close() after printing.
+  const blob = new Blob([htmlWithFlag], { type: "text/html; charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.style.display = "none";
-  document.body.appendChild(a);
-  a.click();
+  const tab = window.open(url, "_blank");
 
-  // Clean up the object URL after a short delay
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 2000);
+  // Revoke the Blob URL once the tab has loaded (2 s is ample for local blobs).
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  if (!tab) {
+    throw new Error(
+      "Could not open a new tab. Please allow pop-ups for this site and try again.",
+    );
+  }
 }

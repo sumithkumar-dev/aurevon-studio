@@ -1175,5 +1175,22 @@
       });
     })();
   </script>
+
+  <!-- Auto-print: triggered when this tab is opened by the CRM -->
+  <script>
+    (function () {
+      if (!window.__aurevonPrint) return;
+      window.addEventListener('load', function () {
+        // Small delay lets custom fonts fully render before the print dialog opens
+        setTimeout(function () {
+          window.print();
+          // Close the tab after the user dismisses the dialog (print or cancel)
+          window.addEventListener('afterprint', function () {
+            window.close();
+          });
+        }, 600);
+      });
+    })();
+  </script>
 </body>
 </html>
