@@ -67,7 +67,9 @@ const WORKSPACE_TAG = "__workspace";
  * it returned true for any JSON object, including ones without the tag that
  * parseWorkspace would silently convert to emptyWorkspace().
  */
-export function hasWorkspaceTag(termsNotes: string | null | undefined): boolean {
+export function hasWorkspaceTag(
+  termsNotes: string | null | undefined,
+): boolean {
   if (!termsNotes) return false;
   const trimmed = termsNotes.trim();
   if (!trimmed.startsWith("{")) return false;
@@ -607,7 +609,7 @@ export function applyWorkspaceDefaults(
 
 export const SUGGESTED_DELIVERABLES = [
   "Responsive website (mobile, tablet, desktop)",
-  "Up to {{pages_count}} custom-designed pages",
+  "Up to {{project.pages_count}} custom-designed pages",
   "Contact form with email notification",
   "Google Maps integration",
   "On-page SEO setup (meta titles, descriptions, sitemap)",
