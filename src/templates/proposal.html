@@ -688,15 +688,8 @@
       @page {
         size: A4;
         background: #f7f5f0;
-        /* top: 18mm for content start; bottom: 18mm leaves room for the
-           fixed footer (16mm tall) + a 2mm gap above it.
-           left: 0 so the gold bar background bleeds to edge. */
-        margin: 18mm 0 18mm 0;
+        margin: 18mm 0 20mm 0;
       }
-
-      /* CSS page counter — incremented by the browser for each printed page.
-         The .page-footer uses this via a ::after pseudo on .page-num. */
-      @page { counter-increment: page; }
 
       @media print {
         html {
@@ -723,7 +716,7 @@
           width: var(--page-w);
           max-width: none;
           margin: 0;
-          padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
           background: transparent !important;
         }
         .table-responsive {
@@ -732,23 +725,8 @@
         h2.section-title, h3.sub-title {
           break-after: avoid;
         }
-        /* Footer stays position:fixed so Chrome repeats it on every
-           printed page — same reliable trick as the gold side-bar.
-           Remove the display:none that was here for Puppeteer. */
         .page-footer {
-          position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          display: flex !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        /* Inject "Page N" after the right-hand span using CSS counters.
-           Chrome resets and increments the built-in 'page' counter
-           automatically — no JS needed. */
-        .page-footer .page-num::after {
-          content: " · Page " counter(page);
+          display: none !important;
         }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
@@ -1096,7 +1074,7 @@
         <span
           ><span class="agency-name">{{agency.name}}</span> · Confidential</span
         >
-        <span class="page-num">{{client.business_name}} — Web Design Proposal · {{proposal.id}}</span>
+        <span>{{client.business_name}} — Web Design Proposal · {{proposal.id}}</span>
       </div>
     </div>
 
