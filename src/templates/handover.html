@@ -486,11 +486,11 @@
       */
       @page {
         size: A4;
-        /* Background fills the entire page including margin strips.
-           This is the correct CSS way to paint the gutter areas in Puppeteer. */
         background: #f7f5f0;
-        margin: 18mm 0 20mm 0;
+        margin: 18mm 0 18mm 0;
       }
+
+      @page { counter-increment: page; }
 
       @media print {
         html {
@@ -517,14 +517,23 @@
           width: var(--page-w);
           max-width: none;
           margin: 0;
-          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm) !important;
           background: transparent !important;
         }
         h2.section-title, h3.sub-title {
           break-after: avoid;
         }
         .page-footer {
-          display: none !important;
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          display: flex !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .page-footer .page-num::after {
+          content: " · Page " counter(page);
         }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
@@ -749,7 +758,7 @@
 
       <div class="page-footer">
         <span><span class="agency-name">{{agency.name}}</span> · Handover Document</span>
-        <span>{{client.business_name}} — Project Handover</span>
+        <span class="page-num">{{client.business_name}} — Project Handover</span>
       </div>
     </div>
 
@@ -783,14 +792,12 @@
   <script>
     (function () {
       if (!window.__aurevonPrint) return;
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          window.print();
-          window.addEventListener('afterprint', function () {
-            window.close();
-          });
-        }, 600);
-      });
+      setTimeout(function () {
+        window.print();
+        window.addEventListener('afterprint', function () {
+          window.close();
+        });
+      }, 800);
     })();
   </script>
 </body>

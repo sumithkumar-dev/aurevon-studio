@@ -610,15 +610,11 @@
       */
       @page {
         size: A4;
-        /* Background fills the entire page including margin strips.
-           This is the correct CSS way to paint the gutter areas in Puppeteer. */
         background: #f7f5f0;
-        /* top: 18mm content clearance on every page (incl. page 2+)
-           bottom: 20mm reserved for Puppeteer footerTemplate
-           left: 0 so gold bar background bleeds to edge
-           right: 0 (content padding via --pad-x handles right spacing) */
-        margin: 18mm 0 20mm 0;
+        margin: 18mm 0 18mm 0;
       }
+
+      @page { counter-increment: page; }
 
       @media print {
         html {
@@ -645,7 +641,7 @@
           width: var(--page-w);
           max-width: none;
           margin: 0;
-          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm) !important;
           background: transparent !important;
         }
         .table-responsive { overflow-x: visible; }
@@ -653,7 +649,16 @@
           break-after: avoid;
         }
         .page-footer {
-          display: none !important;
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          display: flex !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .page-footer .page-num::after {
+          content: " · Page " counter(page);
         }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
@@ -908,6 +913,26 @@
 
       <div class="section">
         <div class="eyebrow">Section 06</div>
+        <h2 class="section-title">Refund &amp; Cancellation Policy</h2>
+        <p>The Studio's refund policy reflects the nature of custom creative services, where time and resources are committed from the moment work begins. The following terms apply to all cancellations and refund requests:</p>
+
+        <ul class="clause-list" style="margin-top: 3mm;">
+          <li><strong>Advance / Deposit Payment.</strong> The advance payment is strictly non-refundable. It covers project scheduling, initial discovery, and the Studio's commitment to reserve capacity for this engagement.</li>
+          <li><strong>Work in Progress.</strong> If the Client cancels after work has commenced but before delivery, fees are due for all work completed to the date of cancellation. These are calculated on a pro-rata basis relative to the total project fee and the proportion of deliverables completed.</li>
+          <li><strong>Delivered Milestones.</strong> Fees for milestones or phases already delivered and accepted by the Client are non-refundable, regardless of subsequent cancellation.</li>
+          <li><strong>Studio-initiated Cancellation.</strong> If the Studio cancels the project for reasons other than Client breach, any fees paid for work not yet commenced will be refunded within 14 business days.</li>
+          <li><strong>How to Request.</strong> All cancellation and refund requests must be submitted in writing to <strong>{{agency.contact.email}}</strong>. Verbal requests will not be accepted.</li>
+        </ul>
+
+        <div class="callout-note" style="margin-top: 4mm;">
+          <strong>No refunds on completed projects.</strong> Once the Final Files have been delivered and the project has been signed off, no refund will be issued. The Studio's obligation is to deliver work that substantially conforms to the agreed Proposal — not to guarantee any particular business outcome for the Client.
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section">
+        <div class="eyebrow">Section 07</div>
         <h2 class="section-title">Warranties &amp; Liability</h2>
 
         <div class="two-col" style="margin-top: 2mm;">
@@ -933,7 +958,7 @@
       <hr class="divider" />
 
       <div class="section">
-        <div class="eyebrow">Section 07 &amp; 08</div>
+        <div class="eyebrow">Section 08 &amp; 09</div>
         <h2 class="section-title">Termination &amp; General Terms</h2>
 
         <div class="two-col" style="margin-top: 2mm;">
@@ -1011,7 +1036,7 @@
 
       <div class="page-footer">
         <span><span class="agency-name">{{agency.name}}</span> · Confidential</span>
-        <span>{{client.business_name}} — Client Agreement · {{agreement.id}}</span>
+        <span class="page-num">{{client.business_name}} — Client Agreement · {{agreement.id}}</span>
       </div>
     </div>
 
@@ -1045,14 +1070,12 @@
   <script>
     (function () {
       if (!window.__aurevonPrint) return;
-      window.addEventListener('load', function () {
-        setTimeout(function () {
-          window.print();
-          window.addEventListener('afterprint', function () {
-            window.close();
-          });
-        }, 600);
-      });
+      setTimeout(function () {
+        window.print();
+        window.addEventListener('afterprint', function () {
+          window.close();
+        });
+      }, 800);
     })();
   </script>
 </body>

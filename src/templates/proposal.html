@@ -687,21 +687,19 @@
       */
       @page {
         size: A4;
-        /* Background fills the entire page including margin strips.
-           This is the correct CSS way to paint the gutter areas in Puppeteer. */
         background: #f7f5f0;
-        /* top: 18mm ensures content starts correctly on every page (incl. page 2+)
-           bottom: 20mm reserved for Puppeteer footerTemplate
-           left: 0 so the gold bar background bleeds to edge
-           right: 0 (content padding via --pad-x handles right spacing) */
-        margin: 18mm 0 20mm 0;
+        /* top: 18mm for content start; bottom: 18mm leaves room for the
+           fixed footer (16mm tall) + a 2mm gap above it.
+           left: 0 so the gold bar background bleeds to edge. */
+        margin: 18mm 0 18mm 0;
       }
+
+      /* CSS page counter — incremented by the browser for each printed page.
+         The .page-footer uses this via a ::after pseudo on .page-num. */
+      @page { counter-increment: page; }
 
       @media print {
         html {
-          /* Gold bar as repeating background on html so it appears on
-             every printed page. position:fixed only works on page 1
-             in Puppeteer — background-image repeats correctly. */
           background: var(--paper) !important;
           background-image: linear-gradient(
             to right,
@@ -718,7 +716,6 @@
         body {
           background: transparent !important;
         }
-        /* Hide the screen-only fixed side-bar element */
         .side-bar {
           display: none !important;
         }
@@ -726,9 +723,7 @@
           width: var(--page-w);
           max-width: none;
           margin: 0;
-          /* Content padding: left accounts for gold bar (5px) + gap (8mm) + base pad (14mm).
-             Top/bottom handled by @page margins — no padding needed here. */
-          padding: 0 var(--pad-x) 8mm calc(var(--pad-x) + var(--bar) + 8mm) !important;
+          padding: 0 var(--pad-x) 0 calc(var(--pad-x) + var(--bar) + 8mm) !important;
           background: transparent !important;
         }
         .table-responsive {
@@ -737,16 +732,27 @@
         h2.section-title, h3.sub-title {
           break-after: avoid;
         }
-        /* The in-HTML footer is screen-only — Puppeteer's footerTemplate
-           renders "Page X of Y" natively via displayHeaderFooter. */
+        /* Footer stays position:fixed so Chrome repeats it on every
+           printed page — same reliable trick as the gold side-bar.
+           Remove the display:none that was here for Puppeteer. */
         .page-footer {
-          display: none !important;
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          display: flex !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
-        /* Prevent orphaned section headings at bottom of page */
+        /* Inject "Page N" after the right-hand span using CSS counters.
+           Chrome resets and increments the built-in 'page' counter
+           automatically — no JS needed. */
+        .page-footer .page-num::after {
+          content: " · Page " counter(page);
+        }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
         }
-        /* Allow large sections to split — don't double-stack avoid */
         .section:has(table),
         .section:has(.process-track),
         .section:has(.next-steps-list) {
@@ -1090,7 +1096,7 @@
         <span
           ><span class="agency-name">{{agency.name}}</span> · Confidential</span
         >
-        <span>{{client.business_name}} — Web Design Proposal · {{proposal.id}}</span>
+        <span class="page-num">{{client.business_name}} — Web Design Proposal · {{proposal.id}}</span>
       </div>
     </div>
 
@@ -1180,16 +1186,15 @@
   <script>
     (function () {
       if (!window.__aurevonPrint) return;
-      window.addEventListener('load', function () {
-        // Small delay lets custom fonts fully render before the print dialog opens
-        setTimeout(function () {
-          window.print();
-          // Close the tab after the user dismisses the dialog (print or cancel)
-          window.addEventListener('afterprint', function () {
-            window.close();
-          });
-        }, 600);
-      });
+      // Blob URLs are already loaded by the time this IIFE runs (end of body).
+      // The setTimeout only exists to let Google Fonts finish rendering —
+      // without it the print dialog can open before custom fonts apply.
+      setTimeout(function () {
+        window.print();
+        window.addEventListener('afterprint', function () {
+          window.close();
+        });
+      }, 800);
     })();
   </script>
 </body>
