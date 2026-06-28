@@ -44,7 +44,17 @@ export type LeadNote = {
 export type LeadPatch = Partial<
   Pick<
     Lead,
-    "source" | "status" | "priority" | "final_budget" | "follow_up_date"
+    | "name"
+    | "business_name"
+    | "phone"
+    | "email"
+    | "industry"
+    | "budget"
+    | "source"
+    | "status"
+    | "priority"
+    | "final_budget"
+    | "follow_up_date"
   >
 >;
 

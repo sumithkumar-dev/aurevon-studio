@@ -32,6 +32,21 @@ export type WorkspaceMilestone = {
   paid_via?: string | null;
 };
 
+export type CallScriptBlockKind =
+  | "intro"
+  | "discovery"
+  | "pitch"
+  | "objection"
+  | "closing"
+  | "custom";
+
+export type CallScriptBlock = {
+  id: string;
+  kind: CallScriptBlockKind;
+  title: string;
+  body: string;
+};
+
 export type WorkspacePayload = {
   contact_title: string | null;
   location: string | null;
@@ -53,6 +68,7 @@ export type WorkspacePayload = {
   domain_provider: string | null;
   hosting_provider: string | null;
   legacy_notes: string | null;
+  call_script: CallScriptBlock[];
 };
 
 const WORKSPACE_TAG = "__workspace";
@@ -103,6 +119,7 @@ export function emptyWorkspace(): WorkspacePayload {
     domain_provider: null,
     hosting_provider: null,
     legacy_notes: null,
+    call_script: [],
   };
 }
 
@@ -194,6 +211,24 @@ function normaliseMilestones(v: unknown): WorkspaceMilestone[] {
     .filter(Boolean) as WorkspaceMilestone[];
 }
 
+function normaliseCallScript(v: unknown): CallScriptBlock[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((raw): CallScriptBlock | null => {
+      if (!raw || typeof raw !== "object") return null;
+      const r = raw as Record<string, unknown>;
+      const id = typeof r.id === "string" && r.id ? r.id : ensureId("cs");
+      const title = str(r.title) ?? "";
+      const body = str(r.body) ?? "";
+      const validKinds = ["intro", "discovery", "pitch", "objection", "closing", "custom"];
+      const kind = validKinds.includes(r.kind as string)
+        ? (r.kind as CallScriptBlockKind)
+        : "custom";
+      return { id, kind, title, body };
+    })
+    .filter(Boolean) as CallScriptBlock[];
+}
+
 /**
  * Parse the workspace payload out of the `terms_notes` column. If the column
  * contains plain (legacy) text instead of our JSON envelope, the text is
@@ -246,6 +281,7 @@ export function parseWorkspace(
     domain_provider: str(r.domain_provider),
     hosting_provider: str(r.hosting_provider),
     legacy_notes: str(r.legacy_notes),
+    call_script: normaliseCallScript(r.call_script),
   };
 }
 
@@ -276,6 +312,18 @@ export function newMilestone(): WorkspaceMilestone {
     paid: false,
     paid_via: null,
   };
+}
+
+export function newCallScriptBlock(kind: CallScriptBlockKind = "custom"): CallScriptBlock {
+  const defaults: Record<CallScriptBlockKind, string> = {
+    intro: "Introduction",
+    discovery: "Discovery Questions",
+    pitch: "Pitch / Value",
+    objection: "Handle Objection",
+    closing: "Close & Next Steps",
+    custom: "Custom Block",
+  };
+  return { id: ensureId("cs"), kind, title: defaults[kind], body: "" };
 }
 
 /* ── Default phases ───────────────────────────────────────────────── */

@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   ClipboardList,
   Download,
+  PhoneCall,
   FileText,
   Globe,
   ListChecks,
@@ -49,6 +50,7 @@ import {
   autoPricingItems,
   defaultMilestones,
   defaultTimelinePhases,
+  newCallScriptBlock,
   newMilestone,
   newPricingItem,
   newTimelineEntry,
@@ -58,6 +60,8 @@ import {
   suggestGoalsForIndustry,
   SUGGESTED_DELIVERABLES,
   SUGGESTED_EXCLUSIONS,
+  type CallScriptBlock,
+  type CallScriptBlockKind,
   type WorkspaceMilestone,
   type WorkspacePayload,
   type WorkspacePricingItem,
@@ -551,6 +555,7 @@ type TabKey =
   | "timeline"
   | "pricing"
   | "documents"
+  | "callscript"
   | "notes";
 
 const TABS: {
@@ -565,6 +570,7 @@ const TABS: {
   { key: "timeline", label: "Timeline", Icon: CalendarClock },
   { key: "pricing", label: "Pricing", Icon: CircleDollarSign },
   { key: "documents", label: "Documents", Icon: FileText },
+  { key: "callscript", label: "Call Script", Icon: PhoneCall },
   { key: "notes", label: "Notes", Icon: StickyNote },
 ];
 
@@ -920,6 +926,12 @@ export function ClientWorkspace({
                   return prev.map((d, i) => (i === idx ? updated : d));
                 });
               }}
+            />
+          )}
+          {tab === "callscript" && (
+            <CallScriptTab
+              workspace={workspace}
+              onPatchWorkspace={patchWorkspace}
             />
           )}
           {tab === "notes" && (
@@ -2140,5 +2152,515 @@ function DocumentsTab({
         )}
       </SectionCard>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Call Script                                                    */
+/* ------------------------------------------------------------------ */
+
+const KIND_LABELS: Record<CallScriptBlockKind, string> = {
+  intro: "Introduction",
+  discovery: "Discovery",
+  pitch: "Pitch",
+  objection: "Objection",
+  closing: "Closing",
+  custom: "Custom",
+};
+
+const KIND_COLORS: Record<CallScriptBlockKind, string> = {
+  intro: "bg-blue-500/15 text-blue-400 border-blue-500/25",
+  discovery: "bg-purple-500/15 text-purple-400 border-purple-500/25",
+  pitch: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+  objection: "bg-red-500/15 text-red-400 border-red-500/25",
+  closing: "bg-green-500/15 text-green-400 border-green-500/25",
+  custom: "bg-zinc-500/15 text-zinc-400 border-zinc-500/25",
+};
+
+const KIND_ORDER: CallScriptBlockKind[] = [
+  "intro",
+  "discovery",
+  "pitch",
+  "objection",
+  "closing",
+  "custom",
+];
+
+const STARTER_SCRIPT: Omit<CallScriptBlock, "id">[] = [
+  {
+    kind: "intro",
+    title: "Introduction",
+    body: "Hi [Name], this is [Your Name] from [Agency]. Hope I'm not catching you at a bad time — I'll keep this quick. We specialize in building websites for local businesses and I noticed yours might benefit from an upgrade. Do you have 2 minutes?",
+  },
+  {
+    kind: "discovery",
+    title: "Discovery Questions",
+    body: "Great! A few quick questions:\n• What does your business do and who are your main customers?\n• Do you currently have a website? If yes — what's working, what's not?\n• Are you running any ads or relying on word-of-mouth right now?\n• Have you tried getting leads online before?\n• What would a good website mean for your business?",
+  },
+  {
+    kind: "pitch",
+    title: "Value Pitch",
+    body: "Based on what you've shared — here's what we'd do:\n\nWe build clean, fast websites that actually convert visitors into enquiries. Most of our clients see calls and WhatsApp messages pick up within the first month.\n\nWe handle everything: design, development, content structure, SEO basics, and launch. You focus on your business — we handle the rest.\n\nProjects typically start from ₹20,000–₹40,000 depending on scope and we work in phases so there's no big upfront risk.",
+  },
+  {
+    kind: "objection",
+    title: "Handle Objections",
+    body: "\"I already have a website\" → That's great! Would you say it's currently bringing in new customers? Most old sites look fine but aren't optimized for conversions or mobile.\n\n\"Too expensive\" → We work within budgets — the question is what's it costing you not to have one that works? And we offer phased payment.\n\n\"Not the right time\" → Totally understand. Can I send over a quick portfolio and we revisit in 2 weeks?\n\n\"Let me think about it\" → Of course. What specific concerns do you have? Let me address those now so you have everything you need.",
+  },
+  {
+    kind: "closing",
+    title: "Close & Next Steps",
+    body: "Here's what I'd suggest: let me send you a couple of examples of sites we've built for similar businesses — you can see the quality yourself.\n\nIf it looks interesting, we do a free 20-minute discovery call where I'll sketch out exactly what we'd build for you and give you a fixed quote — no obligation.\n\nCould I get your WhatsApp number to send that across? What's the best time to follow up if you have questions?",
+  },
+];
+
+function parseImportedScript(raw: string): Omit<CallScriptBlock, "id">[] {
+  const blocks: Omit<CallScriptBlock, "id">[] = [];
+  // Try to detect headings like: ## Introduction, # PITCH, **Closing**, 1. Discovery
+  const sectionPattern =
+    /^(?:#+\s*|(?:\d+\.\s+)|(?:\*{1,2}))?([A-Z][A-Za-z\s/&-]{2,40})(?:\*{1,2})?:?\s*$/gm;
+  const matches = [...raw.matchAll(sectionPattern)];
+
+  if (matches.length >= 2) {
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const title = match[1].trim();
+      const start = (match.index ?? 0) + match[0].length;
+      const end = i + 1 < matches.length ? (matches[i + 1].index ?? raw.length) : raw.length;
+      const body = raw.slice(start, end).trim();
+      if (!body) continue;
+
+      // Detect kind from title keywords
+      const tl = title.toLowerCase();
+      let kind: CallScriptBlockKind = "custom";
+      if (/intro|greeting|open|hello/.test(tl)) kind = "intro";
+      else if (/discov|question|qualify|assess/.test(tl)) kind = "discovery";
+      else if (/pitch|value|offer|present|benefit/.test(tl)) kind = "pitch";
+      else if (/object|concern|pushback|hesit|rebut/.test(tl)) kind = "objection";
+      else if (/clos|next|step|follow|wrap|end/.test(tl)) kind = "closing";
+
+      blocks.push({ kind, title, body });
+    }
+  }
+
+  // Fallback: treat entire pasted text as a single custom block
+  if (blocks.length === 0 && raw.trim()) {
+    blocks.push({ kind: "custom", title: "Imported Script", body: raw.trim() });
+  }
+
+  return blocks;
+}
+
+function CallScriptTab({
+  workspace,
+  onPatchWorkspace,
+}: {
+  workspace: WorkspacePayload;
+  onPatchWorkspace: (partial: Partial<WorkspacePayload>) => void;
+}) {
+  const [mode, setMode] = useState<"edit" | "call">("edit");
+  const [activeBlock, setActiveBlock] = useState<string | null>(null);
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const [importing, setImporting] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const blocks = workspace.call_script ?? [];
+
+  function save(next: CallScriptBlock[]) {
+    onPatchWorkspace({ call_script: next });
+  }
+
+  function addBlock(kind: CallScriptBlockKind) {
+    const nb = newCallScriptBlock(kind);
+    save([...blocks, nb]);
+    setEditingId(nb.id);
+  }
+
+  function removeBlock(id: string) {
+    save(blocks.filter((b) => b.id !== id));
+    if (editingId === id) setEditingId(null);
+    if (activeBlock === id) setActiveBlock(null);
+  }
+
+  function updateBlock(id: string, patch: Partial<CallScriptBlock>) {
+    save(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  }
+
+  function moveBlock(id: string, dir: -1 | 1) {
+    const idx = blocks.findIndex((b) => b.id === id);
+    if (idx < 0) return;
+    const next = [...blocks];
+    const swap = idx + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    save(next);
+  }
+
+  function loadStarter() {
+    const starter = STARTER_SCRIPT.map((s) => ({
+      ...s,
+      id: `cs-${Math.random().toString(36).slice(2, 9)}`,
+    }));
+    save(starter);
+  }
+
+  function handleImport() {
+    if (!importText.trim()) return;
+    const parsed = parseImportedScript(importText);
+    const newBlocks = parsed.map((p) => ({
+      ...p,
+      id: `cs-${Math.random().toString(36).slice(2, 9)}`,
+    }));
+    save([...blocks, ...newBlocks]);
+    setImportText("");
+    setImporting(false);
+  }
+
+  function toggleCheck(id: string) {
+    setChecked((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  function resetCall() {
+    setChecked({});
+    setActiveBlock(null);
+  }
+
+  const progress =
+    blocks.length > 0
+      ? Math.round((Object.values(checked).filter(Boolean).length / blocks.length) * 100)
+      : 0;
+
+  // ── Empty state ─────────────────────────────────────────────────────
+  if (blocks.length === 0 && !importing) {
+    return (
+      <SectionCard
+        title="Call Script"
+        description="Write, edit and follow your cold call script in real time."
+        Icon={PhoneCall}
+      >
+        <div className="flex flex-col items-center gap-5 py-10 text-center">
+          <div className="grid size-14 place-items-center rounded-2xl border border-border bg-secondary text-accent">
+            <PhoneCall size={24} />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">No script yet</p>
+            <p className="mt-1 text-xs text-muted-foreground max-w-xs">
+              Load our proven cold call template, paste a script from ChatGPT, or build your own block by block.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={loadStarter}
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors"
+            >
+              <PhoneCall size={14} /> Load Starter Script
+            </button>
+            <button
+              onClick={() => setImporting(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              Paste from ChatGPT
+            </button>
+            <button
+              onClick={() => addBlock("intro")}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              + Build from scratch
+            </button>
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
+
+  // ── Import panel ────────────────────────────────────────────────────
+  if (importing) {
+    return (
+      <SectionCard
+        title="Import Script"
+        description="Paste text from ChatGPT or any source — sections are auto-detected."
+        Icon={PhoneCall}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Tip: ask ChatGPT — <em>"Write a cold call script for a web agency targeting Indian restaurants. Use clear headings like Introduction, Discovery, Pitch, Objections, Closing."</em>
+          </p>
+          <textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder="Paste your script here…"
+            rows={14}
+            className={textareaClass}
+          />
+          <div className="flex gap-3">
+            <button
+              onClick={handleImport}
+              disabled={!importText.trim()}
+              className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
+            >
+              Import & Parse
+            </button>
+            <button
+              onClick={() => { setImporting(false); setImportText(""); }}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm text-foreground hover:bg-secondary transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
+
+  // ── CALL mode ───────────────────────────────────────────────────────
+  if (mode === "call") {
+    return (
+      <div className="space-y-4">
+        {/* Call mode header */}
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-card/60 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+              <PhoneCall size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Live Call Mode</p>
+              <p className="text-xs text-muted-foreground">{progress}% complete · {Object.values(checked).filter(Boolean).length}/{blocks.length} steps</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={resetCall}
+              className="rounded-full border border-border px-3.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              Reset
+            </button>
+            <button
+              onClick={() => setMode("edit")}
+              className="rounded-full border border-border px-3.5 py-1.5 text-xs text-foreground hover:bg-secondary transition-colors"
+            >
+              Edit Script
+            </button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1.5 w-full rounded-full bg-border overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Script blocks in call mode */}
+        <div className="space-y-3">
+          {blocks.map((block) => {
+            const isActive = activeBlock === block.id;
+            const isDone = checked[block.id];
+            return (
+              <div
+                key={block.id}
+                onClick={() => setActiveBlock(isActive ? null : block.id)}
+                className={`rounded-2xl border transition-all cursor-pointer ${
+                  isDone
+                    ? "border-border/40 bg-background/20 opacity-60"
+                    : isActive
+                    ? "border-accent/50 bg-card/80 shadow-[0_0_0_1px_hsl(var(--accent)/0.3)]"
+                    : "border-border bg-card/40 hover:border-border/80 hover:bg-card/60"
+                }`}
+              >
+                <div className="flex items-center gap-3 px-5 py-3.5">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleCheck(block.id); }}
+                    className={`flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      isDone
+                        ? "border-green-500 bg-green-500 text-white"
+                        : "border-border hover:border-accent"
+                    }`}
+                  >
+                    {isDone && (
+                      <svg viewBox="0 0 10 8" width="10" height="8" fill="none">
+                        <path d="M1 4l2.5 2.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                  {/* Kind badge */}
+                  <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${KIND_COLORS[block.kind]}`}>
+                    {KIND_LABELS[block.kind]}
+                  </span>
+                  {/* Title */}
+                  <span className={`flex-1 text-sm font-medium ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                    {block.title}
+                  </span>
+                  {/* Expand arrow */}
+                  <svg
+                    viewBox="0 0 12 12"
+                    width="12"
+                    height="12"
+                    className={`shrink-0 text-muted-foreground transition-transform ${isActive ? "rotate-180" : ""}`}
+                  >
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+
+                {/* Expanded body */}
+                {isActive && (
+                  <div className="border-t border-border/60 px-5 py-4">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                      {block.body || <span className="text-muted-foreground italic">No content.</span>}
+                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleCheck(block.id); }}
+                      className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                        isDone
+                          ? "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                          : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                      }`}
+                    >
+                      {isDone ? "Mark as pending" : "✓ Mark complete"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {progress === 100 && (
+          <div className="rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-4 text-center">
+            <p className="text-sm font-semibold text-green-400">Script complete! 🎉</p>
+            <p className="mt-1 text-xs text-muted-foreground">Great call. Log the outcome in Notes and set a follow-up date.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── EDIT mode ───────────────────────────────────────────────────────
+  return (
+    <div className="space-y-4">
+      {/* Edit mode header */}
+      <SectionCard
+        title="Call Script"
+        description="Build your script block by block. Switch to Call Mode when you're on the phone."
+        Icon={PhoneCall}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setImporting(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            >
+              Paste / Import
+            </button>
+            <button
+              onClick={() => { setMode("call"); setActiveBlock(blocks[0]?.id ?? null); }}
+              disabled={blocks.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
+            >
+              <PhoneCall size={12} /> Start Call
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          {blocks.map((block, idx) => {
+            const isEditing = editingId === block.id;
+            return (
+              <div
+                key={block.id}
+                className="rounded-2xl border border-border bg-background/30 overflow-hidden"
+              >
+                {/* Block header */}
+                <div className="flex items-center gap-3 px-4 py-3">
+                  {/* Move buttons */}
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <button
+                      onClick={() => moveBlock(block.id, -1)}
+                      disabled={idx === 0}
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
+                      title="Move up"
+                    >
+                      <svg viewBox="0 0 10 10" width="10" height="10"><path d="M2 7l3-4 3 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                    <button
+                      onClick={() => moveBlock(block.id, 1)}
+                      disabled={idx === blocks.length - 1}
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
+                      title="Move down"
+                    >
+                      <svg viewBox="0 0 10 10" width="10" height="10"><path d="M2 3l3 4 3-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
+
+                  {/* Kind selector */}
+                  <select
+                    value={block.kind}
+                    onChange={(e) => updateBlock(block.id, { kind: e.target.value as CallScriptBlockKind })}
+                    className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-transparent cursor-pointer focus:outline-none ${KIND_COLORS[block.kind]}`}
+                  >
+                    {KIND_ORDER.map((k) => (
+                      <option key={k} value={k}>{KIND_LABELS[k]}</option>
+                    ))}
+                  </select>
+
+                  {/* Title */}
+                  <input
+                    value={block.title}
+                    onChange={(e) => updateBlock(block.id, { title: e.target.value })}
+                    className="flex-1 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    placeholder="Block title…"
+                  />
+
+                  {/* Toggle expand / delete */}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => setEditingId(isEditing ? null : block.id)}
+                      className="rounded-lg p-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                    >
+                      {isEditing ? "▲" : "▼"}
+                    </button>
+                    <button
+                      onClick={() => removeBlock(block.id)}
+                      className="rounded-lg p-1.5 text-xs text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      title="Remove block"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Editable body */}
+                {isEditing && (
+                  <div className="border-t border-border/60 px-4 pb-4 pt-3">
+                    <textarea
+                      value={block.body}
+                      onChange={(e) => updateBlock(block.id, { body: e.target.value })}
+                      rows={6}
+                      className={textareaClass}
+                      placeholder="Write your script for this section…"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Add block buttons */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="self-center text-xs text-muted-foreground">Add block:</span>
+          {KIND_ORDER.map((kind) => (
+            <button
+              key={kind}
+              onClick={() => addBlock(kind)}
+              className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors hover:opacity-80 ${KIND_COLORS[kind]}`}
+            >
+              + {KIND_LABELS[kind]}
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+    </div>
   );
 }

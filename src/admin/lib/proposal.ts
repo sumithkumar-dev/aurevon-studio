@@ -446,7 +446,12 @@ function buildProposalData(
     scope: {
       deliverables: workspace.deliverables.map((d) => ({
         icon: "⬡",
-        title: d,
+        title: d
+          .replace("{{pages_count}}", String(workspace.pages_count ?? ""))
+          .replace(
+            "{{project.pages_count}}",
+            String(workspace.pages_count ?? ""),
+          ),
         items: [] as string[],
       })),
       exclusions: workspace.exclusions,

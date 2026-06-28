@@ -3,10 +3,8 @@ import { motion } from "framer-motion";
 import {
   Building2,
   CalendarClock,
-  IndianRupee,
   Loader2,
   Mail,
-  MessageSquare,
   Phone,
   Send,
   Tag,
@@ -25,7 +23,7 @@ import {
   StatusBadge,
   StatusSelect,
 } from "./badges";
-import { ControlPanel, ContactLink, InfoTile } from "./tiles";
+import { ControlPanel, InfoTile } from "./tiles";
 import { NotesSection } from "./NotesSection";
 
 export function LeadDrawer({
@@ -42,6 +40,12 @@ export function LeadDrawer({
   onConvert?: () => Promise<Client>;
 }) {
   const [finalBudget, setFinalBudget] = useState(lead.final_budget ?? "");
+  const [name, setName] = useState(lead.name ?? "");
+  const [businessName, setBusinessName] = useState(lead.business_name ?? "");
+  const [phone, setPhone] = useState(lead.phone ?? "");
+  const [email, setEmail] = useState(lead.email ?? "");
+  const [industry, setIndustry] = useState(lead.industry ?? "");
+  const [budget, setBudget] = useState(lead.budget ?? "");
   const [converting, setConverting] = useState(false);
   const [convertMsg, setConvertMsg] = useState<string | null>(null);
 
@@ -150,26 +154,40 @@ export function LeadDrawer({
             Contact information
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <InfoTile Icon={User} label="Name" value={lead.name} />
+            <ControlPanel label="Name">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onBlur={() => onPatch({ name: name.trim() || lead.name })}
+                placeholder="Contact name"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
             <InfoTile
               Icon={CalendarClock}
               label="Added"
               value={formatDateTime(lead.created_at)}
             />
           </div>
-          <div className="mt-3 grid gap-3">
-            <ContactLink
-              Icon={Mail}
-              href={`mailto:${lead.email}`}
-              label="Email"
-              value={lead.email}
-            />
-            <ContactLink
-              Icon={Phone}
-              href={`tel:${lead.phone}`}
-              label="Phone"
-              value={lead.phone}
-            />
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <ControlPanel label="Email">
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => onPatch({ email: email.trim() || lead.email })}
+                placeholder="email@example.com"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
+            <ControlPanel label="Phone">
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                onBlur={() => onPatch({ phone: phone.trim() || lead.phone })}
+                placeholder="+91 99999 00000"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
           </div>
 
           {/* BUSINESS INFORMATION */}
@@ -177,17 +195,41 @@ export function LeadDrawer({
             Business information
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <InfoTile
-              Icon={Building2}
-              label="Business"
-              value={lead.business_name}
-            />
-            <InfoTile
-              Icon={MessageSquare}
-              label="Industry"
-              value={lead.industry}
-            />
-            <InfoTile Icon={IndianRupee} label="Budget" value={lead.budget} />
+            <ControlPanel label="Business name">
+              <input
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                onBlur={() =>
+                  onPatch({
+                    business_name: businessName.trim() || lead.business_name,
+                  })
+                }
+                placeholder="Business name"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
+            <ControlPanel label="Industry">
+              <input
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                onBlur={() =>
+                  onPatch({ industry: industry.trim() || lead.industry })
+                }
+                placeholder="e.g. Restaurant, Real Estate"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
+            <ControlPanel label="Quoted budget">
+              <input
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                onBlur={() =>
+                  onPatch({ budget: budget.trim() || lead.budget })
+                }
+                placeholder="e.g. ₹30,000"
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+              />
+            </ControlPanel>
             <InfoTile
               Icon={Tag}
               label="Final budget"

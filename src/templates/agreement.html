@@ -614,6 +614,30 @@
         margin: 18mm 0 20mm 0;
       }
 
+
+      /* ── Screen preview (non-print view) ───────────────────────────────
+         When the tab is opened for preview (without print dialog), show
+         the document as a centred card on a neutral background so the
+         layout is clear and readable. Does not affect printed output. ── */
+      @media screen {
+        html {
+          background: #1a1a1a;
+        }
+        body {
+          background: #1a1a1a;
+          min-height: 100vh;
+          padding: 24px 16px 48px;
+          box-sizing: border-box;
+        }
+        .sheet {
+          box-shadow: 0 4px 32px rgba(0, 0, 0, 0.5);
+          border-radius: 4px;
+          overflow: visible;
+        }
+        .side-bar {
+          border-radius: 4px 0 0 4px;
+        }
+      }
       @media print {
         html {
           background: var(--paper) !important;
