@@ -1,5 +1,4 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import aurevonLogoDark from "@/assets/logo/aurevon-black.png";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -95,14 +94,6 @@ export function Navbar() {
           aria-label="AUREVON Studios - Home"
           className="group flex min-w-0 items-center gap-2.5"
         >
-          <img
-            src={aurevonLogoDark}
-            alt="Aurevon Studios"
-            width="32"
-            height="32"
-            className="h-8 w-8 object-contain transition-opacity duration-300 group-hover:opacity-75"
-            loading="eager"
-          />
           <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase transition-opacity duration-300 group-hover:opacity-75">
             Aurevon<span className="text-accent ml-1">Studios</span>
           </span>

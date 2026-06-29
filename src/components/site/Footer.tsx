@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import aurevonLogoDark from "@/assets/logo/aurevon-black.png";
 import { Mail, Phone, MessageCircle, MapPin } from "lucide-react";
 import { FaInstagram } from "react-icons/fa";
 import { CONTACT } from "@/lib/contact-info";
@@ -28,13 +27,6 @@ export function Footer() {
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <div className="flex items-center gap-2.5">
-              <img
-                src={aurevonLogoDark}
-                alt="Aurevon Studios"
-                width="32"
-                height="32"
-                className="h-8 w-8 object-contain"
-              />
               <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase">
                 Aurevon<span className="text-accent ml-1">Studios</span>
               </span>
