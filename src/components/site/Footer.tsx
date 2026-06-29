@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import aurevonLogoLight from "@/assets/logo/aurevon-logo-light.svg";
-import { Mail, Phone, MessageCircle, MapPin, Instagram } from "lucide-react";
+import { Mail, Phone, MessageCircle, MapPin } from "lucide-react";
+import { FaInstagram } from "react-icons/fa";
 import { CONTACT } from "@/lib/contact-info";
 
 const TELANGANA_CITIES = [
@@ -168,7 +169,7 @@ export function Footer() {
                   </a>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Instagram size={14} className="text-accent shrink-0" />
+                  <FaInstagram size={14} className="text-accent shrink-0" />
                   <a
                     href="https://instagram.com/aurevon.studios"
                     target="_blank"
@@ -200,7 +201,7 @@ export function Footer() {
               rel="noreferrer"
               className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
             >
-              <Instagram size={12} /> Instagram
+              <FaInstagram size={12} /> Instagram
             </a>
             <span className="text-border">·</span>
             <a
