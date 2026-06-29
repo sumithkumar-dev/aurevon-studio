@@ -384,13 +384,6 @@ export function Dashboard({ email }: { email: string }) {
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-30">
         <div className="container-aurevon min-h-16 py-3 flex flex-col gap-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
           <Link to="/" className="flex min-w-0 items-center gap-2.5">
-            <img
-              src={aurevonLogoDark}
-              alt="Aurevon Studios"
-              width="32"
-              height="32"
-              className="h-8 w-8 object-contain"
-            />
             <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase hidden sm:inline">
               Aurevon<span className="text-accent ml-1">Studios</span>
             </span>
