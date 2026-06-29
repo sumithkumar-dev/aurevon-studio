@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import aurevonLogoLight from "@/assets/logo/aurevon-logo-light.svg";
 import {
   AlertTriangle,
   Briefcase,
@@ -10,6 +11,7 @@ import {
   Inbox,
   Loader2,
   LogOut,
+  PhoneCall,
   Plus,
   RefreshCw,
   Users,
@@ -59,8 +61,9 @@ import {
 } from "./ClientFilters";
 import { ClientsTable } from "./ClientsTable";
 import { ClientWorkspace } from "./ClientWorkspace";
+import { CallScriptPage } from "./CallScriptPage";
 
-type Tab = "leads" | "clients";
+type Tab = "leads" | "clients" | "callscript";
 
 export function Dashboard({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>("leads");
@@ -380,12 +383,15 @@ export function Dashboard({ email }: { email: string }) {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-30">
         <div className="container-aurevon min-h-16 py-3 flex flex-col gap-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
-          <Link to="/" className="flex min-w-0 items-center gap-2">
-            <span className="size-2 rounded-full bg-accent shadow-[0_0_12px_var(--accent)]" />
-            <span className="font-display text-base min-[380px]:text-lg tracking-[0.18em] md:tracking-[0.2em]">
-              AUREVON
-            </span>
-            <span className="ml-1 rounded-full border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <Link to="/" className="flex min-w-0 items-center gap-3">
+            <img
+              src={aurevonLogoLight}
+              alt="Aurevon Studios"
+              width="140"
+              height="36"
+              className="h-8 w-auto"
+            />
+            <span className="rounded-full border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               CRM
             </span>
           </Link>
@@ -425,6 +431,16 @@ export function Dashboard({ email }: { email: string }) {
             }`}
           >
             <Briefcase size={14} /> Clients
+          </button>
+          <button
+            onClick={() => setTab("callscript")}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+              tab === "callscript"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <PhoneCall size={14} /> Call Scripts
           </button>
         </div>
 
@@ -588,6 +604,10 @@ export function Dashboard({ email }: { email: string }) {
               )}
             </div>
           </>
+        )}
+
+        {tab === "callscript" && (
+          <CallScriptPage />
         )}
       </div>
 

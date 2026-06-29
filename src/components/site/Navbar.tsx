@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import aurevonLogoLight from "@/assets/logo/aurevon-logo-light.svg";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -91,16 +92,17 @@ export function Navbar() {
         {/* Logo always goes home */}
         <Link
           to="/"
-          aria-label="AUREVON - Home"
-          className="group flex min-w-0 items-center gap-2"
+          aria-label="AUREVON Studios - Home"
+          className="group flex min-w-0 items-center"
         >
-          <span className="relative flex">
-            <span className="size-2 rounded-full bg-accent shadow-[0_0_14px_var(--accent)] transition-transform duration-500 group-hover:scale-125" />
-            <span className="absolute inset-0 size-2 rounded-full bg-accent/40 animate-ping" />
-          </span>
-          <span className="font-display text-base min-[360px]:text-lg md:text-xl tracking-[0.18em] md:tracking-[0.22em] text-foreground transition-colors duration-300 group-hover:text-accent">
-            AUREVON
-          </span>
+          <img
+            src={aurevonLogoLight}
+            alt="Aurevon Studios"
+            width="160"
+            height="40"
+            className="h-9 w-auto transition-opacity duration-300 group-hover:opacity-80"
+            loading="eager"
+          />
         </Link>
 
         {/* Desktop nav */}

@@ -603,6 +603,86 @@
          When the tab is opened for preview (without print dialog), show
          the document as a centred card on a neutral background so the
          layout is clear and readable. Does not affect printed output. ── */
+
+      /* ── Document header (logo + agency identity) ────────────────────── */
+      .doc-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 5mm;
+        border-bottom: 1.5px solid var(--warm);
+        margin-bottom: 5mm;
+      }
+      .doc-header-logo {
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+      }
+      .doc-header-icon {
+        height: 28px;
+        width: 28px;
+        flex-shrink: 0;
+      }
+      .doc-header-name {
+        font-family: var(--sans);
+        font-size: 13pt;
+        font-weight: 300;
+        letter-spacing: 0.18em;
+        color: var(--navy);
+        text-transform: uppercase;
+      }
+      .doc-header-sub {
+        font-family: var(--sans);
+        font-size: 7.5pt;
+        font-weight: 400;
+        letter-spacing: 0.14em;
+        color: var(--gold);
+        text-transform: uppercase;
+        margin-top: 0.5mm;
+        display: flex;
+        align-items: center;
+        gap: 2.5mm;
+      }
+      .doc-header-sub::before,
+      .doc-header-sub::after {
+        content: "";
+        display: inline-block;
+        height: 1px;
+        width: 6mm;
+        background: var(--gold);
+        opacity: 0.6;
+      }
+      .doc-header-agency {
+        text-align: right;
+      }
+      .doc-header-contact {
+        font-family: var(--sans);
+        font-size: 8pt;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+      .doc-header-contact a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      .doc-social-links {
+        display: inline-flex;
+        align-items: center;
+        gap: 3mm;
+        margin-top: 1.5mm;
+        font-size: 7.5pt;
+        color: var(--muted);
+      }
+      .doc-social-links a {
+        color: var(--gold);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .doc-social-sep {
+        color: var(--warm);
+        font-size: 8pt;
+      }
+
       @media screen {
         html {
           background: #1a1a1a;
@@ -672,8 +752,30 @@
     <div class="side-bar"></div>
     <div class="sheet">
 
+      <!-- Document Header with Logo -->
+      <header class="doc-header">
+        <div class="doc-header-logo">
+          <div class="doc-header-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" style="height:100%;width:auto;display:block;"><defs><linearGradient id="lgo" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#D4A84B"/><stop offset="55%" stop-color="#C8963E"/><stop offset="100%" stop-color="#A67830"/></linearGradient></defs><polygon points="26,166 58,34 74,34 42,166" fill="url(#lgo)"/><polygon points="74,34 90,34 122,166 106,166" fill="url(#lgo)"/><polygon points="46,118 54,90 96,90 104,118" fill="url(#lgo)"/><path d="M86,34 L164,34 L164,64 L112,64 L112,90 L164,90 L164,166 L86,166 L86,136 L138,136 L138,112 L86,112 Z" fill="#f7f5f0"/><path d="M94,42 L156,42 L156,56 L112,56 L112,64 L94,64 Z" fill="url(#lgo)"/><path d="M94,136 L112,136 L112,144 L156,144 L156,158 L94,158 Z" fill="url(#lgo)"/></svg></div>
+          <div>
+            <div class="doc-header-name">Aurevon</div>
+            <div class="doc-header-sub">Studios</div>
+          </div>
+        </div>
+        <div class="doc-header-agency">
+          <div class="doc-header-contact">
+            {{agency.contact.name}} &nbsp;·&nbsp; {{agency.title}}<br/>
+            <a href="tel:{{agency.contact.phone}}">{{agency.contact.phone}}</a> &nbsp;·&nbsp; <a href="mailto:{{agency.contact.email}}">{{agency.contact.email}}</a>
+          </div>
+          <div class="doc-social-links">
+            <a href="https://instagram.com/aurevon.studios" target="_blank">&#64;aurevon.studios</a>
+            <span class="doc-social-sep">|</span>
+            <a href="tel:{{agency.contact.phone}}">Call</a>
+          </div>
+        </div>
+      </header>
+
       <!-- Cover -->
-      <div class="section" style="padding-top: 4mm;">
+      <div class="section" style="padding-top: 2mm;">
         <div class="eyebrow">Tax Invoice</div>
         <h1 class="display">Payment<br />{{#if invoice.is_paid}}Paid{{else}}Due{{/if}}</h1>
         <div class="divider-gold"></div>
@@ -951,9 +1053,13 @@
           <div class="tagline">Questions about this invoice? We're here.</div>
           <div class="contact-details">
             <div class="contact-row"><strong>{{agency.contact.name}}</strong></div>
-            <div class="contact-row">{{agency.contact.phone}}</div>
-            <div class="contact-row">{{agency.contact.email}}</div>
-            <div class="contact-row">{{agency.social.instagram}}</div>
+            <div class="contact-row"><a href="tel:{{agency.contact.phone}}">{{agency.contact.phone}}</a></div>
+            <div class="contact-row"><a href="mailto:{{agency.contact.email}}">{{agency.contact.email}}</a></div>
+            <div class="contact-row" style="display:inline-flex;align-items:center;gap:6px;margin-top:1mm;">
+              <a href="https://instagram.com/aurevon.studios" target="_blank" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Instagram</a>
+              <span style="color:rgba(255,255,255,0.3);">|</span>
+              <a href="tel:{{agency.contact.phone}}" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Call</a>
+            </div>
           </div>
         </div>
       </div>

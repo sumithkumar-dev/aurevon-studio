@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { Mail, Phone, MessageCircle, MapPin } from "lucide-react";
+import aurevonLogoLight from "@/assets/logo/aurevon-logo-light.svg";
+import { Mail, Phone, MessageCircle, MapPin, Instagram } from "lucide-react";
 import { CONTACT } from "@/lib/contact-info";
 
 const TELANGANA_CITIES = [
@@ -25,11 +26,14 @@ export function Footer() {
       <div className="container-aurevon py-14 md:py-16">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-accent" />
-              <span className="font-display text-xl tracking-[0.2em]">
-                AUREVON
-              </span>
+            <div className="flex items-center">
+              <img
+                src={aurevonLogoLight}
+                alt="Aurevon Studios"
+                width="180"
+                height="45"
+                className="h-10 w-auto"
+              />
             </div>
             <p className="mt-4 text-sm text-muted-foreground max-w-sm leading-relaxed">
               Premium websites for business owners across Telangana - clinics,
@@ -164,6 +168,17 @@ export function Footer() {
                   </a>
                 </li>
                 <li className="flex items-center gap-2">
+                  <Instagram size={14} className="text-accent shrink-0" />
+                  <a
+                    href="https://instagram.com/aurevon.studios"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    @aurevon.studios
+                  </a>
+                </li>
+                <li className="flex items-center gap-2">
                   <MapPin size={14} className="text-accent shrink-0" />
                   {CONTACT.location}
                 </li>
@@ -178,7 +193,23 @@ export function Footer() {
             © {new Date().getFullYear()} AUREVON Studio. Proudly serving local
             businesses in Telangana.
           </span>
-          <span>Hyderabad · Secunderabad · across Telangana</span>
+          <span className="flex items-center gap-4">
+            <a
+              href="https://instagram.com/aurevon.studios"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
+              <Instagram size={12} /> Instagram
+            </a>
+            <span className="text-border">·</span>
+            <a
+              href="tel:+919177916932"
+              className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors"
+            >
+              <Phone size={12} /> Call
+            </a>
+          </span>
         </div>
       </div>
     </footer>
