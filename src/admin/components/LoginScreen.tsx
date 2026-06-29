@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import aurevonLogoLight from "@/assets/logo/aurevon-logo-light.svg";
+import aurevonLogoDark from "@/assets/logo/aurevon-black.png";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,14 +60,17 @@ export function LoginScreen() {
         transition={{ duration: 0.45 }}
         className="w-full max-w-md rounded-3xl border border-border bg-card/40 p-7 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.5)] md:p-9"
       >
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center gap-2.5">
           <img
-            src={aurevonLogoLight}
+            src={aurevonLogoDark}
             alt="Aurevon Studios"
-            width="160"
-            height="40"
-            className="h-9 w-auto"
+            width="32"
+            height="32"
+            className="h-8 w-8 object-contain"
           />
+          <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase">
+            Aurevon<span className="text-accent ml-1">Studios</span>
+          </span>
         </Link>
 
         <div className="mt-7 text-[10px] font-medium uppercase tracking-[0.3em] text-accent">
