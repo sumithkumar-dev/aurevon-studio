@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import aurevonLogoDark from "@/assets/logo/aurevon-black.png";
 import {
   AlertTriangle,
   Briefcase,
