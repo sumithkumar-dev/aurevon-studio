@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import type { MouseEvent as ReactMouseEvent, CSSProperties } from "react";
 import {
   PhoneCall,
   Plus,
@@ -15,6 +16,7 @@ import {
   Maximize2,
   X,
   Type,
+  Scissors,
 } from "lucide-react";
 import {
   newCallScriptBlock,
@@ -85,37 +87,19 @@ function uid() {
   return `cs-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function parseImportedScript(raw: string): Omit<CallScriptBlock, "id">[] {
-  const sectionPattern =
-    /^(?:#+\s*|(?:\d+\.\s+)|(?:\*{1,2}))?([A-Z][A-Za-z\s/&-]{2,40})(?:\*{1,2})?:?\s*$/gm;
-  const matches = [...raw.matchAll(sectionPattern)];
-  const blocks: Omit<CallScriptBlock, "id">[] = [];
+// Pasted/imported text is never auto-split into multiple blocks — it comes
+// in exactly as one block. Splitting is a deliberate, manual action (select
+// text → right-click → "Make a block"), never something the page guesses at.
+function wrapAsSingleBlock(raw: string): Omit<CallScriptBlock, "id"> {
+  return { kind: "custom", title: "Imported Script", body: raw.trim() };
+}
 
-  if (matches.length >= 2) {
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      const title = match[1].trim();
-      const start = (match.index ?? 0) + match[0].length;
-      const end =
-        i + 1 < matches.length
-          ? (matches[i + 1].index ?? raw.length)
-          : raw.length;
-      const body = raw.slice(start, end).trim();
-      if (!body) continue;
-      const tl = title.toLowerCase();
-      let kind: CallScriptBlockKind = "custom";
-      if (/intro|greeting|open|hello/.test(tl)) kind = "intro";
-      else if (/discov|question|qualify|assess/.test(tl)) kind = "discovery";
-      else if (/pitch|value|offer|present|benefit/.test(tl)) kind = "pitch";
-      else if (/object|concern|pushback|hesit|rebut/.test(tl)) kind = "objection";
-      else if (/clos|next|step|follow|wrap|end/.test(tl)) kind = "closing";
-      blocks.push({ kind, title, body });
-    }
-  }
-  if (blocks.length === 0 && raw.trim()) {
-    blocks.push({ kind: "custom", title: "Imported Script", body: raw.trim() });
-  }
-  return blocks;
+// Short title guess for a newly split-off block, taken from its first line.
+function deriveTitle(text: string): string {
+  const firstLine = text.split("\n")[0].trim();
+  const words = firstLine.split(/\s+/).slice(0, 6).join(" ");
+  if (!words) return "New Block";
+  return words.length > 40 ? `${words.slice(0, 40)}…` : words;
 }
 
 /* ── Styles ─────────────────────────────────────────────────────────── */
@@ -134,6 +118,7 @@ function AutoGrowTextarea({
   className = "",
   minRows = 4,
   autoFocus,
+  onContextMenu,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -141,6 +126,7 @@ function AutoGrowTextarea({
   className?: string;
   minRows?: number;
   autoFocus?: boolean;
+  onContextMenu?: (e: ReactMouseEvent<HTMLTextAreaElement>) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -166,9 +152,13 @@ function AutoGrowTextarea({
       ref={ref}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onContextMenu={onContextMenu}
       placeholder={placeholder}
       rows={minRows}
       autoFocus={autoFocus}
+      spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="off"
       className={`${className} resize-none overflow-hidden`}
     />
   );
@@ -359,10 +349,12 @@ function BlockFocusModal({
   block,
   onChange,
   onClose,
+  onContextMenu,
 }: {
   block: CallScriptBlock;
   onChange: (patch: Partial<CallScriptBlock>) => void;
   onClose: () => void;
+  onContextMenu?: (e: ReactMouseEvent<HTMLTextAreaElement>) => void;
 }) {
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -392,6 +384,9 @@ function BlockFocusModal({
           <input
             value={block.title}
             onChange={(e) => onChange({ title: e.target.value })}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             className="min-w-0 flex-1 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
             placeholder="Block title…"
           />
@@ -407,12 +402,16 @@ function BlockFocusModal({
           autoFocus
           value={block.body}
           onChange={(e) => onChange({ body: e.target.value })}
+          onContextMenu={onContextMenu}
           placeholder="Write your script for this section…"
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
           className="flex-1 resize-none overflow-y-auto bg-transparent px-6 py-5 text-[15px] leading-[1.8] text-foreground placeholder:text-muted-foreground focus:outline-none"
         />
         <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
           <span className="text-xs text-muted-foreground">
-            {wordCount} word{wordCount !== 1 ? "s" : ""} · Autosaved
+            {wordCount} word{wordCount !== 1 ? "s" : ""} · Autosaved · Select text and right-click to split it into its own block
           </span>
           <button
             onClick={onClose}
@@ -422,6 +421,65 @@ function BlockFocusModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Split menu: the only way a block ever gets split ─────────────────
+   Appears when the user selects text inside a block and right-clicks.
+   Splitting never happens automatically — this is the single deliberate
+   trigger for it. */
+function SplitMenu({
+  x,
+  y,
+  onConfirm,
+  onCancel,
+}: {
+  x: number;
+  y: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickAway(e: globalThis.MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onCancel();
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    // Skip the click that opened the menu.
+    const t = setTimeout(() => {
+      window.addEventListener("mousedown", handleClickAway);
+      window.addEventListener("contextmenu", handleClickAway);
+    }, 0);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("mousedown", handleClickAway);
+      window.removeEventListener("contextmenu", handleClickAway);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [onCancel]);
+
+  // Keep the menu on-screen near the click point.
+  const style: CSSProperties = {
+    position: "fixed",
+    left: Math.min(x, (typeof window !== "undefined" ? window.innerWidth : x) - 220),
+    top: Math.min(y, (typeof window !== "undefined" ? window.innerHeight : y) - 90),
+    zIndex: 60,
+  };
+
+  return (
+    <div ref={ref} style={style} className="min-w-[190px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+      <button
+        onClick={onConfirm}
+        className="flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-sm text-foreground hover:bg-secondary transition-colors"
+      >
+        <Scissors size={14} className="text-accent" />
+        Make a block
+      </button>
     </div>
   );
 }
@@ -449,6 +507,13 @@ function ScriptEditor({
   const [readingSize, setReadingSize] = useState<ReadingSize>(loadReadingSize);
   const [showSaved, setShowSaved] = useState(false);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+  const [splitMenu, setSplitMenu] = useState<{
+    blockId: string;
+    start: number;
+    end: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Which blocks are open. Defaults to "all open" so the whole script is
   // visible the moment you land on it — no clicking through each block.
@@ -537,12 +602,9 @@ function ScriptEditor({
 
   function handleImport() {
     if (!importText.trim()) return;
-    const parsed = parseImportedScript(importText);
-    const newBlocks = parsed.map((p) => ({ ...p, id: uid() }));
-    persist([...blocks, ...newBlocks]);
-    const next = new Set(expandedIds);
-    newBlocks.forEach((b) => next.add(b.id));
-    persistExpanded(next);
+    const nb: CallScriptBlock = { ...wrapAsSingleBlock(importText), id: uid() };
+    persist([...blocks, nb]);
+    persistExpanded(new Set(expandedIds).add(nb.id));
     setImportText("");
     setImporting(false);
   }
@@ -550,6 +612,49 @@ function ScriptEditor({
   function changeReadingSize(size: ReadingSize) {
     setReadingSize(size);
     saveReadingSize(size);
+  }
+
+  // Manual split: user selects text inside a block, right-clicks, and picks
+  // "Make a block". The selection becomes its own new block right after the
+  // current one; nothing is ever split automatically.
+  function handleSplitContextMenu(
+    e: ReactMouseEvent<HTMLTextAreaElement>,
+    blockId: string,
+  ) {
+    const el = e.currentTarget;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) return; // no selection — let the normal menu show
+    e.preventDefault();
+    setSplitMenu({ blockId, start, end, x: e.clientX, y: e.clientY });
+  }
+
+  function confirmSplit() {
+    if (!splitMenu) return;
+    const { blockId, start, end } = splitMenu;
+    const idx = blocks.findIndex((b) => b.id === blockId);
+    setSplitMenu(null);
+    if (idx < 0) return;
+    const block = blocks[idx];
+    const selected = block.body.slice(start, end).trim();
+    if (!selected) return;
+
+    const before = block.body.slice(0, start).trimEnd();
+    const after = block.body.slice(end).trimStart();
+    const remaining = [before, after].filter(Boolean).join("\n\n");
+
+    const newBlock: CallScriptBlock = {
+      id: uid(),
+      kind: block.kind,
+      title: deriveTitle(selected),
+      body: selected,
+    };
+
+    const next = [...blocks];
+    next[idx] = { ...block, body: remaining };
+    next.splice(idx + 1, 0, newBlock);
+    persist(next);
+    persistExpanded(new Set(expandedIds).add(newBlock.id));
   }
 
   function toggleCheck(id: string) {
@@ -582,10 +687,10 @@ function ScriptEditor({
           <div>
             <h2 className="text-base font-medium text-foreground">Import Script</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Paste text from ChatGPT or any source — sections are auto-detected by heading.
+              Paste text from ChatGPT or anywhere else — it comes in as one block, exactly as pasted. Nothing is split automatically.
             </p>
             <p className="mt-2 text-xs text-accent/80 italic">
-              Tip: ask ChatGPT — "Write a cold call script for a web agency targeting Indian restaurants. Use clear headings like Introduction, Discovery, Pitch, Objections, Closing."
+              To split it up: select the part you want to separate out, right-click, and choose "Make a block".
             </p>
           </div>
           <AutoGrowTextarea
@@ -780,6 +885,9 @@ function ScriptEditor({
               setName(e.target.value);
               persist(blocks, e.target.value);
             }}
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
             className="bg-transparent text-xl font-medium text-foreground focus:outline-none border-b border-transparent focus:border-accent/40 transition-colors pb-0.5"
             placeholder="Script name…"
           />
@@ -858,22 +966,27 @@ function ScriptEditor({
       {/* Blocks */}
       {blocks.length > 0 && (
         <div className="space-y-2.5">
-          {blocks.length > 1 && (
-            <div className="flex justify-end gap-3 px-1">
-              <button
-                onClick={expandAll}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronsUpDown size={12} /> Expand all
-              </button>
-              <button
-                onClick={collapseAll}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ChevronsDownUp size={12} /> Collapse all
-              </button>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
+              <Scissors size={11} /> Select text in a block and right-click to split it into a new one
+            </span>
+            {blocks.length > 1 && (
+              <div className="flex gap-3">
+                <button
+                  onClick={expandAll}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronsUpDown size={12} /> Expand all
+                </button>
+                <button
+                  onClick={collapseAll}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChevronsDownUp size={12} /> Collapse all
+                </button>
+              </div>
+            )}
+          </div>
           {blocks.map((block, idx) => {
             const isEditing = expandedIds.has(block.id);
             return (
@@ -923,6 +1036,9 @@ function ScriptEditor({
                     onChange={(e) =>
                       updateBlock(block.id, { title: e.target.value })
                     }
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="off"
                     className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
                     placeholder="Block title…"
                   />
@@ -960,6 +1076,7 @@ function ScriptEditor({
                     <AutoGrowTextarea
                       value={block.body}
                       onChange={(v) => updateBlock(block.id, { body: v })}
+                      onContextMenu={(e) => handleSplitContextMenu(e, block.id)}
                       minRows={4}
                       className={textareaClass}
                       placeholder="Write your script for this section…"
@@ -996,9 +1113,21 @@ function ScriptEditor({
               block={focused}
               onChange={(patch) => updateBlock(focused.id, patch)}
               onClose={() => setFocusedBlockId(null)}
+              onContextMenu={(e) => handleSplitContextMenu(e, focused.id)}
             />
           );
         })()}
+
+      {/* Manual split menu — appears only when text is selected and
+          right-clicked; nothing ever splits on its own. */}
+      {splitMenu && (
+        <SplitMenu
+          x={splitMenu.x}
+          y={splitMenu.y}
+          onConfirm={confirmSplit}
+          onCancel={() => setSplitMenu(null)}
+        />
+      )}
     </div>
   );
 }
