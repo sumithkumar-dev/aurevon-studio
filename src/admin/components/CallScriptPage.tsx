@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   PhoneCall,
   Plus,
   Trash2,
   ChevronDown,
   ChevronUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
   CheckCircle2,
   Circle,
   RotateCcw,
   FileText,
   ArrowLeft,
+  Maximize2,
+  X,
+  Type,
 } from "lucide-react";
 import {
   newCallScriptBlock,
@@ -116,7 +121,110 @@ function parseImportedScript(raw: string): Omit<CallScriptBlock, "id">[] {
 /* ── Styles ─────────────────────────────────────────────────────────── */
 const inputClass =
   "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-ring/30 transition-colors";
-const textareaClass = inputClass + " min-h-[96px] resize-y leading-relaxed";
+const textareaClass = inputClass + " leading-relaxed";
+
+/* ── Auto-growing textarea ──────────────────────────────────────────────
+   Grows to fit its content automatically, so a block's full script is
+   always visible the moment it's opened — no manual drag-resizing, and
+   nothing to "lose" between visits since there's no fixed height to keep. */
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+  className = "",
+  minRows = 4,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  minRows?: number;
+  autoFocus?: boolean;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const resize = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    resize();
+  }, [value, resize]);
+
+  useEffect(() => {
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, [resize]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={minRows}
+      autoFocus={autoFocus}
+      className={`${className} resize-none overflow-hidden`}
+    />
+  );
+}
+
+/* ── Expanded-block persistence ─────────────────────────────────────────
+   Which blocks are open is remembered per script, so the page never
+   reverts back to a collapsed state you have to fight with again. */
+function expandedKey(scriptId: string) {
+  return `aurevon_call_script_expanded_${scriptId}`;
+}
+
+function loadExpanded(scriptId: string): Set<string> | null {
+  try {
+    const raw = localStorage.getItem(expandedKey(scriptId));
+    if (!raw) return null;
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return null;
+  }
+}
+
+function saveExpanded(scriptId: string, ids: Set<string>) {
+  try {
+    localStorage.setItem(expandedKey(scriptId), JSON.stringify([...ids]));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+/* ── Call-mode reading size ──────────────────────────────────────────── */
+type ReadingSize = "sm" | "base" | "lg";
+const READING_SIZE_KEY = "aurevon_call_reading_size";
+const READING_SIZE_CLASSES: Record<ReadingSize, string> = {
+  sm: "text-sm leading-relaxed",
+  base: "text-[15px] leading-relaxed",
+  lg: "text-lg leading-loose",
+};
+
+function loadReadingSize(): ReadingSize {
+  try {
+    const v = localStorage.getItem(READING_SIZE_KEY);
+    if (v === "sm" || v === "base" || v === "lg") return v;
+  } catch {
+    // ignore
+  }
+  return "base";
+}
+
+function saveReadingSize(v: ReadingSize) {
+  try {
+    localStorage.setItem(READING_SIZE_KEY, v);
+  } catch {
+    // ignore
+  }
+}
 
 /* ── Script list view ────────────────────────────────────────────────── */
 
@@ -245,6 +353,79 @@ function ScriptListView({
   );
 }
 
+/* ── Focus mode: distraction-free editor for long blocks ─────────────── */
+
+function BlockFocusModal({
+  block,
+  onChange,
+  onClose,
+}: {
+  block: CallScriptBlock;
+  onChange: (patch: Partial<CallScriptBlock>) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const wordCount = block.body.trim() ? block.body.trim().split(/\s+/).length : 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-8"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-border/60 px-6 py-4">
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${KIND_COLORS[block.kind]}`}
+          >
+            {KIND_LABELS[block.kind]}
+          </span>
+          <input
+            value={block.title}
+            onChange={(e) => onChange({ title: e.target.value })}
+            className="min-w-0 flex-1 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+            placeholder="Block title…"
+          />
+          <button
+            onClick={onClose}
+            className="shrink-0 rounded-full p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+            title="Close (Esc)"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <textarea
+          autoFocus
+          value={block.body}
+          onChange={(e) => onChange({ body: e.target.value })}
+          placeholder="Write your script for this section…"
+          className="flex-1 resize-none overflow-y-auto bg-transparent px-6 py-5 text-[15px] leading-[1.8] text-foreground placeholder:text-muted-foreground focus:outline-none"
+        />
+        <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
+          <span className="text-xs text-muted-foreground">
+            {wordCount} word{wordCount !== 1 ? "s" : ""} · Autosaved
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Script editor + call mode ───────────────────────────────────────── */
 
 function ScriptEditor({
@@ -265,7 +446,38 @@ function ScriptEditor({
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [readingSize, setReadingSize] = useState<ReadingSize>(loadReadingSize);
+  const [showSaved, setShowSaved] = useState(false);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+
+  // Which blocks are open. Defaults to "all open" so the whole script is
+  // visible the moment you land on it — no clicking through each block.
+  // Once you collapse/expand something, that choice is remembered.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    const saved = loadExpanded(script.id);
+    if (saved) return saved;
+    return new Set(script.blocks.map((b) => b.id));
+  });
+
+  function persistExpanded(next: Set<string>) {
+    setExpandedIds(next);
+    saveExpanded(script.id, next);
+  }
+
+  function toggleExpand(id: string) {
+    const next = new Set(expandedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    persistExpanded(next);
+  }
+
+  function expandAll() {
+    persistExpanded(new Set(blocks.map((b) => b.id)));
+  }
+
+  function collapseAll() {
+    persistExpanded(new Set());
+  }
 
   function persist(nextBlocks: CallScriptBlock[], nextName?: string) {
     const updated: ScriptMeta = {
@@ -277,19 +489,29 @@ function ScriptEditor({
     onSave(updated);
     setBlocks(nextBlocks);
     if (nextName !== undefined) setName(nextName);
+    setShowSaved(true);
   }
+
+  useEffect(() => {
+    if (!showSaved) return;
+    const t = setTimeout(() => setShowSaved(false), 1500);
+    return () => clearTimeout(t);
+  }, [showSaved]);
 
   function addBlock(kind: CallScriptBlockKind) {
     const nb = newCallScriptBlock(kind);
     const next = [...blocks, nb];
     persist(next);
-    setEditingId(nb.id);
+    persistExpanded(new Set(expandedIds).add(nb.id));
   }
 
   function removeBlock(id: string) {
     persist(blocks.filter((b) => b.id !== id));
-    if (editingId === id) setEditingId(null);
+    const next = new Set(expandedIds);
+    next.delete(id);
+    persistExpanded(next);
     if (activeBlock === id) setActiveBlock(null);
+    if (focusedBlockId === id) setFocusedBlockId(null);
   }
 
   function updateBlock(id: string, patch: Partial<CallScriptBlock>) {
@@ -310,6 +532,7 @@ function ScriptEditor({
   function loadStarter() {
     const starter = STARTER_SCRIPT.map((s) => ({ ...s, id: uid() }));
     persist(starter);
+    persistExpanded(new Set(starter.map((s) => s.id)));
   }
 
   function handleImport() {
@@ -317,8 +540,16 @@ function ScriptEditor({
     const parsed = parseImportedScript(importText);
     const newBlocks = parsed.map((p) => ({ ...p, id: uid() }));
     persist([...blocks, ...newBlocks]);
+    const next = new Set(expandedIds);
+    newBlocks.forEach((b) => next.add(b.id));
+    persistExpanded(next);
     setImportText("");
     setImporting(false);
+  }
+
+  function changeReadingSize(size: ReadingSize) {
+    setReadingSize(size);
+    saveReadingSize(size);
   }
 
   function toggleCheck(id: string) {
@@ -357,11 +588,11 @@ function ScriptEditor({
               Tip: ask ChatGPT — "Write a cold call script for a web agency targeting Indian restaurants. Use clear headings like Introduction, Discovery, Pitch, Objections, Closing."
             </p>
           </div>
-          <textarea
+          <AutoGrowTextarea
             value={importText}
-            onChange={(e) => setImportText(e.target.value)}
+            onChange={setImportText}
             placeholder="Paste your script here…"
-            rows={14}
+            minRows={14}
             className={textareaClass}
           />
           <div className="flex gap-3">
@@ -401,7 +632,25 @@ function ScriptEditor({
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-full border border-border p-0.5">
+              {(["sm", "base", "lg"] as ReadingSize[]).map((size) => (
+                <button
+                  key={size}
+                  onClick={() => changeReadingSize(size)}
+                  title={
+                    size === "sm" ? "Small text" : size === "base" ? "Medium text" : "Large text"
+                  }
+                  className={`rounded-full px-2 py-1 transition-colors ${
+                    readingSize === size
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Type size={size === "sm" ? 11 : size === "base" ? 13 : 15} />
+                </button>
+              ))}
+            </div>
             <button
               onClick={resetCall}
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-xs text-muted-foreground hover:bg-secondary transition-colors"
@@ -474,7 +723,9 @@ function ScriptEditor({
                 </div>
                 {isActive && (
                   <div className="border-t border-border/60 px-5 py-4">
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                    <p
+                      className={`whitespace-pre-wrap text-foreground/90 ${READING_SIZE_CLASSES[readingSize]}`}
+                    >
                       {block.body || (
                         <span className="italic text-muted-foreground">No content.</span>
                       )}
@@ -532,6 +783,13 @@ function ScriptEditor({
             className="bg-transparent text-xl font-medium text-foreground focus:outline-none border-b border-transparent focus:border-accent/40 transition-colors pb-0.5"
             placeholder="Script name…"
           />
+          <span
+            className={`text-[11px] text-muted-foreground/70 transition-opacity duration-500 ${
+              showSaved ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            Saved
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -600,8 +858,24 @@ function ScriptEditor({
       {/* Blocks */}
       {blocks.length > 0 && (
         <div className="space-y-2.5">
+          {blocks.length > 1 && (
+            <div className="flex justify-end gap-3 px-1">
+              <button
+                onClick={expandAll}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronsUpDown size={12} /> Expand all
+              </button>
+              <button
+                onClick={collapseAll}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronsDownUp size={12} /> Collapse all
+              </button>
+            </div>
+          )}
           {blocks.map((block, idx) => {
-            const isEditing = editingId === block.id;
+            const isEditing = expandedIds.has(block.id);
             return (
               <div
                 key={block.id}
@@ -653,12 +927,17 @@ function ScriptEditor({
                     placeholder="Block title…"
                   />
 
-                  {/* Expand / delete */}
+                  {/* Focus / expand / delete */}
                   <div className="flex shrink-0 items-center gap-1">
                     <button
-                      onClick={() =>
-                        setEditingId(isEditing ? null : block.id)
-                      }
+                      onClick={() => setFocusedBlockId(block.id)}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                      title="Open in focus mode"
+                    >
+                      <Maximize2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => toggleExpand(block.id)}
                       className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
                     >
                       {isEditing ? (
@@ -678,12 +957,10 @@ function ScriptEditor({
 
                 {isEditing && (
                   <div className="border-t border-border/60 px-4 pb-4 pt-3">
-                    <textarea
+                    <AutoGrowTextarea
                       value={block.body}
-                      onChange={(e) =>
-                        updateBlock(block.id, { body: e.target.value })
-                      }
-                      rows={6}
+                      onChange={(v) => updateBlock(block.id, { body: v })}
+                      minRows={4}
                       className={textareaClass}
                       placeholder="Write your script for this section…"
                     />
@@ -708,6 +985,20 @@ function ScriptEditor({
           </button>
         ))}
       </div>
+
+      {/* Focus mode overlay */}
+      {focusedBlockId &&
+        (() => {
+          const focused = blocks.find((b) => b.id === focusedBlockId);
+          if (!focused) return null;
+          return (
+            <BlockFocusModal
+              block={focused}
+              onChange={(patch) => updateBlock(focused.id, patch)}
+              onClose={() => setFocusedBlockId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
