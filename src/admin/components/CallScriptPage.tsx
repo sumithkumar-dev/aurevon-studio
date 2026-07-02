@@ -484,6 +484,47 @@ function SplitMenu({
   );
 }
 
+/* ── Arm-then-confirm guard against mistouches ─────────────────────────
+   A destructive button first "arms" into a Delete/Cancel pair instead of
+   firing immediately. The confirm side stays disabled for a brief moment
+   after arming, so a quick accidental double-tap in the same spot can't
+   land on it, and it auto-disarms if left alone. */
+function useConfirmArm<T>(autoCancelMs = 3500, readyDelayMs = 400) {
+  const [armed, setArmed] = useState<T | null>(null);
+  const [ready, setReady] = useState(false);
+  const cancelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = useCallback(() => {
+    if (cancelTimer.current) clearTimeout(cancelTimer.current);
+    if (readyTimer.current) clearTimeout(readyTimer.current);
+  }, []);
+
+  const arm = useCallback(
+    (value: T) => {
+      clearTimers();
+      setArmed(value);
+      setReady(false);
+      readyTimer.current = setTimeout(() => setReady(true), readyDelayMs);
+      cancelTimer.current = setTimeout(() => {
+        setArmed(null);
+        setReady(false);
+      }, autoCancelMs);
+    },
+    [clearTimers, autoCancelMs, readyDelayMs],
+  );
+
+  const cancel = useCallback(() => {
+    clearTimers();
+    setArmed(null);
+    setReady(false);
+  }, [clearTimers]);
+
+  useEffect(() => clearTimers, [clearTimers]);
+
+  return { armed, ready, arm, cancel };
+}
+
 /* ── Script editor + call mode ───────────────────────────────────────── */
 
 function ScriptEditor({
@@ -514,6 +555,8 @@ function ScriptEditor({
     x: number;
     y: number;
   } | null>(null);
+  const blockDelete = useConfirmArm<string>();
+  const scriptDelete = useConfirmArm<boolean>();
 
   // Which blocks are open. Defaults to "all open" so the whole script is
   // visible the moment you land on it — no clicking through each block.
@@ -924,13 +967,36 @@ function ScriptEditor({
           >
             <PhoneCall size={12} /> Start Call
           </button>
-          <button
-            onClick={() => onDelete(script.id)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
-            title="Delete script"
-          >
-            <Trash2 size={12} />
-          </button>
+          {scriptDelete.armed ? (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onDelete(script.id)}
+                disabled={!scriptDelete.ready}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  scriptDelete.ready
+                    ? "bg-destructive text-white hover:bg-destructive/90"
+                    : "bg-destructive/40 text-white/70 cursor-not-allowed"
+                }`}
+                title={scriptDelete.ready ? "Confirm delete script" : "Hold on…"}
+              >
+                <Trash2 size={12} /> Confirm delete
+              </button>
+              <button
+                onClick={scriptDelete.cancel}
+                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => scriptDelete.arm(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-colors"
+              title="Delete script"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1062,12 +1128,43 @@ function ScriptEditor({
                         <ChevronDown size={14} />
                       )}
                     </button>
-                    <button
-                      onClick={() => removeBlock(block.id)}
-                      className="rounded-lg p-1.5 text-destructive/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {blockDelete.armed === block.id ? (
+                      <div
+                        className="flex items-center gap-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => {
+                            removeBlock(block.id);
+                            blockDelete.cancel();
+                          }}
+                          disabled={!blockDelete.ready}
+                          className={`rounded-lg px-2 py-1 text-[10px] font-semibold transition-colors ${
+                            blockDelete.ready
+                              ? "bg-destructive text-white hover:bg-destructive/90"
+                              : "bg-destructive/40 text-white/70 cursor-not-allowed"
+                          }`}
+                          title={blockDelete.ready ? "Confirm delete" : "Hold on…"}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={blockDelete.cancel}
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                          title="Cancel"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => blockDelete.arm(block.id)}
+                        className="rounded-lg p-1.5 text-destructive/60 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Delete block"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
