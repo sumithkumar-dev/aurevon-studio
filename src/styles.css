@@ -95,6 +95,18 @@
     background: var(--accent);
     color: var(--accent-foreground);
   }
+  /* Native <select> dropdown lists render in a separate browser popup that
+   * does not inherit translucent/pastel badge colors used on the closed
+   * control (e.g. bg-sky-400/10 text-sky-200). Without this, option text
+   * renders in a light/pastel color against the browser's own popup
+   * background, making it nearly unreadable. Force an explicit, solid,
+   * high-contrast pairing so every native select option stays legible
+   * regardless of what classes are applied to the select itself. */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 }
 
 @utility container-aurevon {
