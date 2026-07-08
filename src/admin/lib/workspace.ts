@@ -528,14 +528,10 @@ export function autoPricingItems(
       : "Development — Custom build, contact form, SEO setup, integrations";
   items.push({ id: ensureId("pi"), label: devLabel, amount: 0 });
 
-  //Domain
-  const domainLabel = "Domain Registration — Domain name registration guidance and setup";
-  items.push({ id: ensureId("pi"), label: domainLabel, amount: 0 });
-
   // Launch & Handover
   items.push({
     id: ensureId("pi"),
-    label: "Launch & Handover — QA testing, domain setup, walkthrough session",
+    label: "Launch & Handover — QA testing, Domain setup guidance, walkthrough session",
     amount: 0,
   });
 
