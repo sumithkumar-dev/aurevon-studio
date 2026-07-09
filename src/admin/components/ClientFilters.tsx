@@ -1,6 +1,13 @@
 import { Search } from "lucide-react";
 import { PROJECT_STATUS_OPTIONS } from "../constants";
 import type { ProjectStatus } from "../types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type ClientFiltersState = {
   q: string;
@@ -12,8 +19,8 @@ export const EMPTY_CLIENT_FILTERS: ClientFiltersState = {
   project_status: "All",
 };
 
-const selectClass =
-  "w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent/60 transition-colors";
+const selectTriggerClass =
+  "w-full h-auto bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40";
 
 export function ClientFilters({
   filters,
@@ -37,23 +44,27 @@ export function ClientFilters({
         />
       </div>
 
-      <select
+      <Select
         value={filters.project_status}
-        onChange={(e) =>
+        onValueChange={(v) =>
           onChange({
             ...filters,
-            project_status: e.target.value as ClientFiltersState["project_status"],
+            project_status: v as ClientFiltersState["project_status"],
           })
         }
-        className={selectClass}
       >
-        <option value="All">All project statuses</option>
-        {PROJECT_STATUS_OPTIONS.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={selectTriggerClass}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All">All project statuses</SelectItem>
+          {PROJECT_STATUS_OPTIONS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

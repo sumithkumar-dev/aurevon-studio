@@ -219,7 +219,7 @@ export function getOrCreateDocId(
   ) {
     return existingMetadata[key] as string;
   }
-  return stableId(prefix, clientId);
+  return generateInvoiceNumber(clientId, prefix);
 }
 
 // ─── Mini Handlebars Renderer ─────────────────────────────────────────────────
@@ -389,14 +389,17 @@ function sharedBase(client: Client, workspace: WorkspacePayload) {
     agency: {
       name: agency.name,
       title: agency.title,
-      tagline: "Building better web experiences.",
+      tagline: agency.tagline,
       contact: {
         name: agency.owner_name,
         phone: agency.contact.phone,
         email: agency.contact.email,
         location: agency.contact.location,
       },
-      social: { instagram: agency.social.instagram },
+      social: {
+        instagram: agency.social.instagram,
+        instagram_url: `https://instagram.com/${agency.social.instagram.replace(/^@/, "")}`,
+      },
     },
     client: {
       business_name: client.business_name ?? "",
@@ -411,10 +414,68 @@ function sharedBase(client: Client, workspace: WorkspacePayload) {
       phone: client.primary_contact_phone ?? client.phone ?? "",
       location: workspace.location ?? "",
     },
+    // Shared business-policy variables, sourced from config/agency.ts so
+    // every document (Proposal, Agreement, Invoice) always quotes the same
+    // numbers. Previously each document hardcoded its own copies of these,
+    // which had drifted out of sync with each other.
+    terms: {
+      payment_days: agency.legal.payment_terms_days,
+      late_payment_days: agency.legal.late_payment_grace_days,
+      payment_methods: agency.legal.payment_methods,
+      payment_methods_label: agency.legal.payment_methods.join(" & "),
+      proposal_valid_days: agency.legal.proposal_valid_days,
+      governing_law: agency.legal.governing_law,
+      response_days: agency.legal.client_response_days,
+      reengagement_hold_days: agency.legal.reengagement_hold_days,
+      termination_notice_days: agency.legal.termination_notice_days,
+      cure_period_days: agency.legal.cure_period_days,
+      confidentiality_years: agency.legal.confidentiality_years,
+      refund_processing_days: agency.legal.refund_processing_days,
+    },
     meta: {
       date_iso: new Date().toISOString().slice(0, 10),
     },
   };
+}
+
+/**
+ * Estimated total project duration shown in the proposal header.
+ *
+ * This used to be hardcoded as `timeline.length * 2 weeks` — a placeholder
+ * that had nothing to do with the actual dates on each phase, so editing
+ * the real timeline (changing phase dates, adding/removing phases) never
+ * changed the number shown to the client. It's now computed from real
+ * dates: the client's own project start/launch dates if set (the same
+ * dates already shown just above as project.start_date / project.launch_date),
+ * otherwise the earliest phase start to the latest phase end across the
+ * Timeline tab, so it always reflects whatever timeline is actually on the
+ * document.
+ */
+function estimatedTotalTime(client: Client, workspace: WorkspacePayload): string {
+  const explicitStart = client.project_start_date;
+  const explicitEnd = client.project_end_date ?? client.delivery_date;
+  if (explicitStart && explicitEnd) {
+    const duration = timelineDuration(explicitStart, explicitEnd);
+    if (duration) return duration;
+  }
+
+  const phaseDates = workspace.timeline
+    .flatMap((t) => [t.start, t.end])
+    .filter((d): d is string => Boolean(d))
+    .map((d) => new Date(d.includes("T") ? d : `${d}T00:00:00`))
+    .filter((d) => !isNaN(d.getTime()));
+
+  if (phaseDates.length >= 2) {
+    const earliest = new Date(Math.min(...phaseDates.map((d) => d.getTime())));
+    const latest = new Date(Math.max(...phaseDates.map((d) => d.getTime())));
+    const duration = timelineDuration(
+      earliest.toISOString().slice(0, 10),
+      latest.toISOString().slice(0, 10),
+    );
+    if (duration) return duration;
+  }
+
+  return "To be confirmed";
 }
 
 function buildProposalData(
@@ -482,15 +543,15 @@ function buildProposalData(
       currency: getCurrencySymbol(workspace.currency),
       total: fmt(total),
       extra_revision_charge: fmt(workspace.extra_revision_charge),
-      payment_methods: "UPI & Bank Transfer",
-      payment_terms_days: 7,
-      late_payment_days: 14,
+      payment_methods: agency.legal.payment_methods.join(" & "),
+      payment_terms_days: agency.legal.payment_terms_days,
+      late_payment_days: agency.legal.late_payment_grace_days,
       items: workspace.pricing_items.map((it) => ({
         name: it.label,
-        description: "",
-        frequency: "One-Time",
+        description: it.description ?? "",
+        frequency: it.frequency ?? "One-Time",
         price: fmt(it.amount),
-        highlight: false,
+        highlight: it.highlight ?? false,
       })),
       payments: workspace.milestones.map((m, idx) => {
         const base2 = total && total > 0 ? total : 1;
@@ -507,9 +568,7 @@ function buildProposalData(
       date: today(),
       date_iso: new Date().toISOString().slice(0, 10),
       validity_days: agency.legal.proposal_valid_days,
-      estimated_total_time: workspace.timeline.length
-        ? `${workspace.timeline.length * 2} Weeks`
-        : "2 Weeks",
+      estimated_total_time: estimatedTotalTime(client, workspace),
       next_steps: [
         {
           title: "Review & Approve",
@@ -649,7 +708,7 @@ function buildInvoiceData(
       id: invoiceId,
       date: today(),
       date_iso: new Date().toISOString().slice(0, 10),
-      due_date: dueDate(7),
+      due_date: dueDate(agency.legal.payment_terms_days),
       proposal_id: proposalId,
       agreement_id: agreementId,
       currency: getCurrencySymbol(workspace.currency),

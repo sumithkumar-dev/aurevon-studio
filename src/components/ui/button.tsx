@@ -16,12 +16,24 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        /** The pill-shaped accent button used throughout the app's bespoke
+         * (non-shadcn) surfaces — Dashboard, dialogs, login, etc. Pull this
+         * in instead of hand-writing the same class string again. */
+        accent:
+          "rounded-full bg-accent text-accent-foreground hover:bg-accent-glow",
+        accentOutline:
+          "rounded-full border border-border bg-transparent text-foreground hover:bg-secondary",
       },
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
+        /** Sizes meant to pair with variant="accent" / "accentOutline" —
+         * avoid combining these with sm/lg above, which redeclare
+         * rounded-md and would fight the pill's rounded-full. */
+        pill: "h-auto px-5 py-2.5",
+        pillIcon: "size-9 rounded-full p-0",
       },
     },
     defaultVariants: {

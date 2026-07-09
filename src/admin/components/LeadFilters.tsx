@@ -5,6 +5,13 @@ import {
   STATUS_OPTIONS,
 } from "../constants";
 import type { LeadPriority, LeadSource, LeadStatus } from "../types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type Filters = {
   q: string;
@@ -20,8 +27,8 @@ export const EMPTY_FILTERS: Filters = {
   priority: "All",
 };
 
-const selectClass =
-  "w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent/60 transition-colors";
+const selectTriggerClass =
+  "w-full h-auto bg-surface border border-border rounded-xl px-3 py-2.5 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40";
 
 export function LeadFilters({
   filters,
@@ -45,53 +52,62 @@ export function LeadFilters({
         />
       </div>
 
-      <select
+      <Select
         value={filters.source}
-        onChange={(e) =>
-          onChange({ ...filters, source: e.target.value as Filters["source"] })
+        onValueChange={(v) =>
+          onChange({ ...filters, source: v as Filters["source"] })
         }
-        className={selectClass}
       >
-        <option value="All">All sources</option>
-        {SOURCE_OPTIONS.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={selectTriggerClass}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All">All sources</SelectItem>
+          {SOURCE_OPTIONS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
+      <Select
         value={filters.status}
-        onChange={(e) =>
-          onChange({ ...filters, status: e.target.value as Filters["status"] })
+        onValueChange={(v) =>
+          onChange({ ...filters, status: v as Filters["status"] })
         }
-        className={selectClass}
       >
-        <option value="All">All statuses</option>
-        {STATUS_OPTIONS.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={selectTriggerClass}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All">All statuses</SelectItem>
+          {STATUS_OPTIONS.map((s) => (
+            <SelectItem key={s} value={s}>
+              {s}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
+      <Select
         value={filters.priority}
-        onChange={(e) =>
-          onChange({
-            ...filters,
-            priority: e.target.value as Filters["priority"],
-          })
+        onValueChange={(v) =>
+          onChange({ ...filters, priority: v as Filters["priority"] })
         }
-        className={selectClass}
       >
-        <option value="All">All priorities</option>
-        {PRIORITY_OPTIONS.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className={selectTriggerClass}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All">All priorities</SelectItem>
+          {PRIORITY_OPTIONS.map((p) => (
+            <SelectItem key={p} value={p}>
+              {p}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

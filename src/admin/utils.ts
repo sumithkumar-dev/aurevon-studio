@@ -9,6 +9,32 @@ export function isWithinDays(date: string, days: number) {
   return Date.now() - new Date(date).getTime() < days * 864e5;
 }
 
+/**
+ * Builds a CSV file from a list of records and triggers a browser download.
+ * Used for both the Leads and Clients export buttons in Dashboard.tsx, which
+ * used to each hand-roll an identical copy of this logic — only the
+ * `headers` list and filename differed.
+ */
+export function exportToCsv<T extends Record<string, unknown>>(
+  rows: T[],
+  headers: string[],
+  filenamePrefix: string,
+) {
+  const csvRows = rows.map((row) =>
+    headers
+      .map((h) => `"${String(row[h] ?? "").replace(/"/g, '""')}"`)
+      .join(","),
+  );
+  const csv = [headers.join(","), ...csvRows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function formatDate(date: string) {
   return new Date(date).toLocaleDateString(undefined, {
     month: "short",

@@ -2,6 +2,13 @@ import { Trash2 } from "lucide-react";
 import type { Client, ProjectStatus } from "../types";
 import { formatDate, projectStatusClasses } from "../utils";
 import { PROJECT_STATUS_OPTIONS } from "../constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function ProjectStatusSelect({
   value,
@@ -11,18 +18,21 @@ export function ProjectStatusSelect({
   onChange: (s: ProjectStatus) => void;
 }) {
   return (
-    <select
-      value={value}
-      onClick={(e) => e.stopPropagation()}
-      onChange={(e) => onChange(e.target.value as ProjectStatus)}
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium outline-none ${projectStatusClasses(value)}`}
-    >
-      {PROJECT_STATUS_OPTIONS.map((s) => (
-        <option key={s} value={s}>
-          {s}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => onChange(v as ProjectStatus)}>
+      <SelectTrigger
+        onClick={(e) => e.stopPropagation()}
+        className={`h-auto w-auto gap-1 rounded-full border px-3 py-1.5 text-xs font-medium shadow-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-0 ${projectStatusClasses(value)}`}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {PROJECT_STATUS_OPTIONS.map((s) => (
+          <SelectItem key={s} value={s}>
+            {s}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

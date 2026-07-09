@@ -1,6 +1,10 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const QA = [
   {
@@ -30,46 +34,34 @@ const QA = [
 ];
 
 export function Faq() {
-  const [open, setOpen] = useState<number | null>(0);
   return (
-    <div className="divide-y divide-border border-y border-border">
-      {QA.map((item, i) => {
-        const isOpen = open === i;
-        return (
-          <div key={item.q}>
-            <button
-              onClick={() => setOpen(isOpen ? null : i)}
-              className="w-full py-6 flex items-center justify-between gap-6 text-left group"
-            >
-              <span className="text-lg md:text-xl text-foreground group-hover:text-accent transition-colors">
-                {item.q}
-              </span>
-              <motion.span
-                animate={{ rotate: isOpen ? 45 : 0 }}
-                transition={{ duration: 0.3 }}
-                className="shrink-0 size-9 rounded-full border border-border flex items-center justify-center text-foreground"
-              >
+    <Accordion
+      type="single"
+      collapsible
+      defaultValue={QA[0].q}
+      className="divide-y divide-border border-y border-border"
+    >
+      {QA.map((item) => (
+        <AccordionItem key={item.q} value={item.q} className="border-b-0">
+          <AccordionTrigger
+            className="py-6 hover:no-underline [&>span]:no-underline"
+            icon={
+              <span className="shrink-0 size-9 rounded-full border border-border flex items-center justify-center text-foreground transition-transform duration-300 group-data-[state=open]:rotate-45">
                 <Plus size={16} />
-              </motion.span>
-            </button>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden"
-                >
-                  <p className="pb-6 max-w-2xl text-muted-foreground leading-relaxed">
-                    {item.a}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-      })}
-    </div>
+              </span>
+            }
+          >
+            <span className="text-lg md:text-xl text-foreground group-hover:text-accent transition-colors">
+              {item.q}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pb-0">
+            <p className="pb-6 max-w-2xl text-muted-foreground leading-relaxed">
+              {item.a}
+            </p>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }

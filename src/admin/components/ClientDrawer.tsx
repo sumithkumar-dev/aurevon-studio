@@ -27,6 +27,13 @@ import { ControlPanel, ContactLink, InfoTile } from "./tiles";
 import { ProjectStatusBadge, ProjectStatusSelect } from "./ClientsTable";
 import { ClientNotesSection } from "./ClientNotesSection";
 import { fetchClientDocuments } from "../lib/documents";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const fieldClass =
   "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
@@ -501,19 +508,23 @@ function DetailsTab({
           </div>
         </ControlPanel>
         <ControlPanel label="Payment status">
-          <select
+          <Select
             value={client.payment_status}
-            onChange={(e) =>
-              onPatch({ payment_status: e.target.value as PaymentStatus })
+            onValueChange={(v) =>
+              onPatch({ payment_status: v as PaymentStatus })
             }
-            className={fieldClass}
           >
-            {PAYMENT_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full h-auto rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </ControlPanel>
       </div>
 

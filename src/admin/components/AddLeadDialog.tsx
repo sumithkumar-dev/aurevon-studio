@@ -3,9 +3,19 @@ import { motion } from "framer-motion";
 import { Loader2, X } from "lucide-react";
 import { BUDGET_OPTIONS, INDUSTRY_OPTIONS, SOURCE_OPTIONS } from "../constants";
 import type { LeadSource, NewLeadInput } from "../types";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const fieldClass =
   "mt-2 w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 transition-colors";
+const selectTriggerClass =
+  "mt-2 w-full h-auto bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40";
 const labelClass =
   "text-[10px] uppercase tracking-[0.2em] text-muted-foreground";
 
@@ -79,12 +89,14 @@ export function AddLeadDialog({
             </div>
             <h2 className="mt-1 text-xl text-foreground">Add Lead</h2>
           </div>
-          <button
+          <Button
             onClick={onClose}
-            className="grid size-9 place-items-center rounded-full border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+            variant="accentOutline"
+            size="pillIcon"
+            className="text-muted-foreground hover:text-foreground"
           >
             <X size={16} />
-          </button>
+          </Button>
         </div>
 
         <form
@@ -131,47 +143,57 @@ export function AddLeadDialog({
             </label>
             <label className="block">
               <span className={labelClass}>Source</span>
-              <select
-                className={fieldClass}
+              <Select
                 value={form.source}
-                onChange={(e) => set("source", e.target.value as LeadSource)}
+                onValueChange={(v) => set("source", v as LeadSource)}
               >
-                {SOURCE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={selectTriggerClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SOURCE_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="block">
               <span className={labelClass}>Industry</span>
-              <select
-                className={fieldClass}
-                value={form.industry}
-                onChange={(e) => set("industry", e.target.value)}
+              <Select
+                value={form.industry || undefined}
+                onValueChange={(v) => set("industry", v)}
               >
-                <option value="">Select industry</option>
-                {INDUSTRY_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={selectTriggerClass}>
+                  <SelectValue placeholder="Select industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="block sm:col-span-2">
               <span className={labelClass}>Budget</span>
-              <select
-                className={fieldClass}
-                value={form.budget}
-                onChange={(e) => set("budget", e.target.value)}
+              <Select
+                value={form.budget || undefined}
+                onValueChange={(v) => set("budget", v)}
               >
-                <option value="">Select budget</option>
-                {BUDGET_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={selectTriggerClass}>
+                  <SelectValue placeholder="Select budget" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUDGET_OPTIONS.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             <label className="block sm:col-span-2">
               <span className={labelClass}>Notes</span>
@@ -188,21 +210,24 @@ export function AddLeadDialog({
           {error && <div className="text-sm text-destructive">{error}</div>}
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="rounded-full border border-border px-5 py-2.5 text-sm text-foreground hover:bg-secondary"
+              variant="accentOutline"
+              size="pill"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-2.5 text-sm font-medium hover:bg-accent-glow transition-colors disabled:opacity-60"
+              variant="accent"
+              size="pill"
+              className="disabled:opacity-60"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               Create lead
-            </button>
+            </Button>
           </div>
         </form>
       </motion.div>

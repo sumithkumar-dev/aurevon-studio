@@ -46,7 +46,7 @@ import type {
   NewLeadInput,
   ProjectStatus,
 } from "../types";
-import { isWithinDays } from "../utils";
+import { isWithinDays, exportToCsv } from "../utils";
 import { StatCard } from "./StatCard";
 import { LoadingState, EmptyState } from "./states";
 import { LeadFilters, EMPTY_FILTERS, type Filters } from "./LeadFilters";
@@ -209,37 +209,25 @@ export function Dashboard({ email }: { email: string }) {
   }
 
   function exportCsv() {
-    const headers = [
-      "created_at",
-      "name",
-      "business_name",
-      "email",
-      "phone",
-      "industry",
-      "budget",
-      "final_budget",
-      "source",
-      "status",
-      "priority",
-      "follow_up_date",
-      "message",
-    ];
-    const rows = filtered.map((l) =>
-      headers
-        .map((h) => {
-          const v = (l as unknown as Record<string, unknown>)[h] ?? "";
-          return `"${String(v).replace(/"/g, '""')}"`;
-        })
-        .join(","),
+    exportToCsv(
+      filtered as unknown as Record<string, unknown>[],
+      [
+        "created_at",
+        "name",
+        "business_name",
+        "email",
+        "phone",
+        "industry",
+        "budget",
+        "final_budget",
+        "source",
+        "status",
+        "priority",
+        "follow_up_date",
+        "message",
+      ],
+      "aurevon-leads",
     );
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aurevon-leads-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   // ---------- CLIENTS ----------

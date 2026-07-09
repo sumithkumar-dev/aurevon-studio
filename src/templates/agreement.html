@@ -52,7 +52,8 @@
 
       /* ── Document shell ────────────────────────────────────────────────
          One continuous flowing column instead of fixed-height page
-         buckets. Puppeteer paginates this naturally, so content can
+         buckets. The browser's print engine (window.print()) paginates
+         this naturally, so content can
          never be clipped and never forced into an awkward break.
          Left padding accounts for gold bar (5px) + 8mm gap + base (14mm).
          Bottom padding reserves space for the screen footer; @page margin
@@ -587,26 +588,11 @@
       }
 
       /* ── A4 print geometry ────────────────────────────────────────────
-        Puppeteer PDF configuration reference (set in your pdf() call):
-        {
-          format: 'A4',
-          printBackground: true,
-          margin: { top: '18mm', bottom: '20mm', left: '0', right: '0' },
-          footerTemplate: `
-            <div style="
-              width: 100%; font-family: Inter, sans-serif;
-              font-size: 19pt; color: #1a2233; letter-spacing: 0.04em;
-              display: flex; justify-content: space-between;
-              padding: 0 14mm 0 27mm; box-sizing: border-box; align-items: center;
-              border-top: 2px solid #c8963e;
-              background: #f7f5f0;
-            ">
-              <span><span style="font-weight:700;color:#c8963e;">{{AGENCY_NAME}}</span> · Confidential</span>
-              <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-            </div>`,
-          displayHeaderFooter: true,
-          headerTemplate: '<div style="width:100%;height:100%;background:#f7f5f0;"></div>'
-        }
+        Rendered via the browser's own window.print() (see the auto-print
+        script at the end of <body>) - there is no server-side renderer.
+        The left margin is 0 so the gold side-bar reaches the physical
+        page edge; .page-footer (position: fixed, further down) supplies
+        the repeating "agency name · confidential" footer on every page.
       */
       @page {
         size: A4;
@@ -689,7 +675,9 @@
           break-after: avoid;
         }
         .page-footer {
-          display: none !important;
+          background: var(--paper) !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
@@ -803,7 +791,7 @@
           </div>
         </div>
         <p>
-          This Agreement operates alongside the Proposal issued by {{agency.name}} on {{proposal.date}}.
+          This Agreement operates alongside the Proposal issued by {{agency.name}} on {{agreement.date}}.
           Together, these documents form the complete engagement between the parties. In any conflict,
           this Agreement prevails. Both parties agree that work commences only upon receipt of a signed
           copy of this document and the deposit payment.
@@ -834,7 +822,7 @@
           <div>
             <div class="info-block">
               <div class="label">Approval</div>
-              <div class="value" style="font-size: 10pt; font-weight: 400; color: var(--ink); line-height: 1.55;">Written confirmation that a deliverable or milestone has been accepted. Silence beyond 5 business days constitutes Approval.</div>
+              <div class="value" style="font-size: 10pt; font-weight: 400; color: var(--ink); line-height: 1.55;">Written confirmation that a deliverable or milestone has been accepted. Silence beyond {{terms.response_days}} business days constitutes Approval.</div>
             </div>
             <div class="info-block">
               <div class="label">Working Files</div>
@@ -856,15 +844,15 @@
         <p>The success of this engagement depends on active, timely participation from the Client. By entering this Agreement, the Client commits to the following:</p>
 
         <ul class="clause-list" style="margin-top: 3mm;">
-          <li>Providing all required content, brand assets, access credentials, and materials within <strong>5 business days</strong> of each request, unless a different date is agreed in writing.</li>
+          <li>Providing all required content, brand assets, access credentials, and materials within <strong>{{terms.response_days}} business days</strong> of each request, unless a different date is agreed in writing.</li>
           <li>Designating a <strong>single point of contact</strong> with authority to provide feedback and give Approvals on behalf of the Client organisation.</li>
-          <li>Responding to Studio communications and feedback requests within <strong>5 business days</strong>. Delayed responses that affect the project timeline do not entitle the Client to a fee reduction.</li>
+          <li>Responding to Studio communications and feedback requests within <strong>{{terms.response_days}} business days</strong>. Delayed responses that affect the project timeline do not entitle the Client to a fee reduction.</li>
           <li>Ensuring all materials supplied (text, images, logos, trademarks) are <strong>owned by or licensed to the Client</strong>, free of third-party claims.</li>
           <li>Consolidating all feedback into a <strong>single, clear submission</strong> per revision round, rather than issuing feedback across multiple messages or stages.</li>
         </ul>
 
         <div class="callout-note">
-          <strong>Timeline dependency.</strong> Project timelines in the Proposal are contingent on the Client meeting the responsibilities above. Delays attributable to the Client may cause timeline shifts. A hold exceeding <strong>21 calendar days</strong> may incur a project re-engagement fee to reschedule Studio resources.
+          <strong>Timeline dependency.</strong> Project timelines in the Proposal are contingent on the Client meeting the responsibilities above. Delays attributable to the Client may cause timeline shifts. A hold exceeding <strong>{{terms.reengagement_hold_days}} calendar days</strong> may incur a project re-engagement fee to reschedule Studio resources.
         </div>
       </div>
 
@@ -875,7 +863,7 @@
         <h2 class="section-title">Revisions &amp; Change Management</h2>
         <p>
           The number of included revision rounds is stated in the Proposal
-          (2 rounds).
+          ({{project.revision_rounds}} rounds).
           The following definitions and conditions apply to all revision activity:
         </p>
 
@@ -962,14 +950,14 @@
         <p>Payment follows the schedule stated in the Proposal. The following conditions govern all payments under this Agreement:</p>
 
         <ul class="clause-list" style="margin-top: 3mm;">
-          <li>Work commences only upon receipt of the <strong>deposit payment</strong>. The Studio reserves the right to pause or withhold delivery until payments are brought current.</li>
-          <li>All invoices are payable within <strong>7 days</strong> of the invoice date. Late payments accrue interest at 1.5% per month or the legal maximum, whichever is less.</li>
+          <li>Work commences only upon receipt of the <strong>deposit payment</strong>.</li>
+          <li>All invoices are payable within <strong>{{terms.payment_days}} days</strong> of the invoice date. If a payment is more than <strong>{{terms.late_payment_days}} days</strong> overdue, the Studio may pause or withhold delivery until the outstanding balance is settled.</li>
           <li>All fees are <strong>exclusive of applicable taxes</strong> unless otherwise stated. The Client is responsible for any sales tax, VAT, or withholding taxes.</li>
-          <li>Fees quoted in the Proposal are valid for <strong>14 days</strong> from issue. Acceptance after that period may be subject to revised pricing.</li>
+          <li>Fees quoted in the Proposal are valid for <strong>{{terms.proposal_valid_days}} days</strong> from issue. Acceptance after that period may be subject to revised pricing.</li>
         </ul>
 
         <div class="callout-note">
-          <strong>Non-payment.</strong> If payment is not received within 30 days of the due date, the Studio may suspend hosted deliverables, withhold Final Files, and pursue recovery of outstanding amounts including reasonable collection costs.
+          <strong>Non-payment.</strong> If a payment remains outstanding after delivery has been paused under the condition above, the Studio may withhold the Final Files and pursue recovery of outstanding amounts, including reasonable collection costs.
         </div>
       </div>
 
@@ -984,7 +972,7 @@
           <li><strong>Advance / Deposit Payment.</strong> The advance payment is strictly non-refundable. It covers project scheduling, initial discovery, and the Studio's commitment to reserve capacity for this engagement.</li>
           <li><strong>Work in Progress.</strong> If the Client cancels after work has commenced but before delivery, fees are due for all work completed to the date of cancellation. These are calculated on a pro-rata basis relative to the total project fee and the proportion of deliverables completed.</li>
           <li><strong>Delivered Milestones.</strong> Fees for milestones or phases already delivered and accepted by the Client are non-refundable, regardless of subsequent cancellation.</li>
-          <li><strong>Studio-initiated Cancellation.</strong> If the Studio cancels the project for reasons other than Client breach, any fees paid for work not yet commenced will be refunded within 14 business days.</li>
+          <li><strong>Studio-initiated Cancellation.</strong> If the Studio cancels the project for reasons other than Client breach, any fees paid for work not yet commenced will be refunded within {{terms.refund_processing_days}} business days.</li>
           <li><strong>How to Request.</strong> All cancellation and refund requests must be submitted in writing to <strong>{{agency.contact.email}}</strong>. Verbal requests will not be accepted.</li>
         </ul>
 
@@ -1029,8 +1017,8 @@
           <div>
             <h3 class="sub-title">Termination</h3>
             <ul class="clause-list" style="margin-top: 1.5mm;">
-              <li><strong>Convenience.</strong> Either party may terminate with 14 days' written notice. Work completed to that point remains billable.</li>
-              <li><strong>For cause.</strong> Either party may terminate immediately if the other materially breaches this Agreement and fails to remedy within 7 business days of notice.</li>
+              <li><strong>Convenience.</strong> Either party may terminate with {{terms.termination_notice_days}} days' written notice. Work completed to that point remains billable.</li>
+              <li><strong>For cause.</strong> Either party may terminate immediately if the other materially breaches this Agreement and fails to remedy within {{terms.cure_period_days}} business days of notice.</li>
               <li><strong>Deposit.</strong> The deposit is non-refundable once work has commenced, as it covers scheduling and early-stage work.</li>
             </ul>
           </div>
@@ -1039,8 +1027,8 @@
             <ul class="clause-list" style="margin-top: 1.5mm;">
               <li><strong>Entire agreement.</strong> This Agreement and the Proposal together constitute the full agreement between the parties.</li>
               <li><strong>Amendments.</strong> Any changes must be made in writing and signed by both parties.</li>
-              <li><strong>Governing law.</strong> This Agreement is governed by the laws of {{agency.contact.location}}.</li>
-              <li><strong>Confidentiality.</strong> Both parties keep non-public information shared during this engagement confidential for 2 years post-completion.</li>
+              <li><strong>Governing law.</strong> This Agreement is governed by the laws of {{terms.governing_law}}.</li>
+              <li><strong>Confidentiality.</strong> Both parties keep non-public information shared during this engagement confidential for {{terms.confidentiality_years}} years post-completion.</li>
             </ul>
           </div>
         </div>
@@ -1071,7 +1059,7 @@
             <h3 class="sub-title" style="margin-bottom: 3mm;">Approval Methods:</h3>
             <div class="method-item">Email Confirmation</div>
             <div class="method-item">WhatsApp Confirmation</div>
-            <div class="method-item">Written Approval Through Client Portal</div>
+            <div class="method-item">Signed Copy of This Document</div>
           </div>
         </div>
 
@@ -1094,7 +1082,7 @@
             <div class="contact-row"><strong>{{agency.contact.name}}</strong></div>
             <div class="contact-row">{{agency.contact.phone}}</div>
             <div class="contact-row">{{agency.contact.email}}</div>
-            <div class="contact-row" style="display:inline-flex;align-items:center;gap:6px;margin-top:1.5mm;"><a href="https://instagram.com/aurevon.studios" target="_blank" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">&#64;aurevon.studios</a><span style="color:rgba(255,255,255,0.25);">|</span><a href="tel:{{agency.contact.phone}}" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Call</a></div>
+            <div class="contact-row" style="display:inline-flex;align-items:center;gap:6px;margin-top:1.5mm;"><a href="{{agency.social.instagram_url}}" target="_blank" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">&#64;aurevon.studios</a><span style="color:rgba(255,255,255,0.25);">|</span><a href="tel:{{agency.contact.phone}}" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Call</a></div>
           </div>
         </div>
       </div>
@@ -1107,7 +1095,7 @@
 
   <script>
     /* ── Shared PDF utility: ISO date → "19 June 2026" ─────────────────
-       Runs after Handlebars templating, before Puppeteer snapshot.
+       Runs after templating, just before window.print() further down.
     ──────────────────────────────────────────────────────────────────── */
     (function() {
       const MONTHS = [

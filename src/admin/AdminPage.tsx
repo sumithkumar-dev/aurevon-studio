@@ -6,7 +6,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { Dashboard } from "./components/Dashboard";
 
 export function AdminPage() {
-  useMeta({ title: "Admin - AUREVON" });
+  useMeta({ title: "Admin - AUREVON", noindex: true });
   const [session, setSession] = useState<{ email?: string | null } | null>(
     null,
   );

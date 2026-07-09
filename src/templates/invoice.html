@@ -51,7 +51,8 @@
       }
 
       /* ── Document shell ────────────────────────────────────────────────
-         One continuous flowing column. Puppeteer paginates naturally.
+         One continuous flowing column; the browser's print engine
+         (window.print()) paginates naturally.
          Left padding: gold bar (5px) + 8mm gap + base margin (14mm).
          Bottom padding reserves screen footer space; @page margin handles
          bottom spacing in print. ──────────────────────────────────────── */
@@ -571,26 +572,11 @@
       }
 
       /* ── A4 print geometry ────────────────────────────────────────────
-        Puppeteer PDF configuration reference (set in your pdf() call):
-        {
-          format: 'A4',
-          printBackground: true,
-          margin: { top: '18mm', bottom: '20mm', left: '0', right: '0' },
-          footerTemplate: `
-            <div style="
-              width: 100%; font-family: Inter, sans-serif;
-              font-size: 19pt; color: #1a2233; letter-spacing: 0.04em;
-              display: flex; justify-content: space-between;
-              padding: 0 14mm 0 27mm; box-sizing: border-box; align-items: center;
-              border-top: 2px solid #c8963e;
-              background: #f7f5f0;
-            ">
-              <span><span style="font-weight:700;color:#c8963e;">{{AGENCY_NAME}}</span> · Confidential</span>
-              <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
-            </div>`,
-          displayHeaderFooter: true,
-          headerTemplate: '<div style="width:100%;height:100%;background:#f7f5f0;"></div>'
-        }
+        Rendered via the browser's own window.print() (see the auto-print
+        script at the end of <body>) - there is no server-side renderer.
+        The left margin is 0 so the gold side-bar reaches the physical
+        page edge; .page-footer (position: fixed, further down) supplies
+        the repeating "agency name · confidential" footer on every page.
       */
       @page {
         size: A4;
@@ -706,7 +692,9 @@
           break-after: avoid;
         }
         .page-footer {
-          display: none !important;
+          background: var(--paper) !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         .section > .eyebrow + h2.section-title {
           break-before: avoid;
@@ -759,7 +747,7 @@
       <!-- Cover -->
       <div class="section" style="padding-top: 2mm;">
         <div class="eyebrow">Tax Invoice</div>
-        <h1 class="display">Payment<br />{{#if invoice.is_paid}}Paid{{else}}Due{{/if}}</h1>
+        <h1 class="display">Payment<br />{{#if invoice.is_paid}}Received{{else}}Due{{/if}}</h1>
         <div class="divider-gold"></div>
         <p style="max-width: 90mm; color: var(--muted); line-height: 1.6;">
           Issued by {{agency.name}} for {{client.business_name}}<br />
@@ -855,10 +843,10 @@
         <table class="invoice-table">
           <thead>
             <tr>
-              <th style="width: 45%;">Description</th>
+              <th style="width: 45%;">Item</th>
               <th class="right" style="width: 18%;">Qty</th>
-              <th class="right" style="width: 18%;">Rate (₹)</th>
-              <th class="right" style="width: 19%;">Amount (₹)</th>
+              <th class="right" style="width: 18%;">Rate ({{invoice.currency}})</th>
+              <th class="right" style="width: 19%;">Amount ({{invoice.currency}})</th>
             </tr>
           </thead>
           <tbody>
@@ -909,37 +897,14 @@
             <div>
               <div class="info-block" style="margin: 0;">
                 <div class="label">Method</div>
-                <div class="value">{{#if invoice.payment.method}}{{invoice.payment.method}}{{else if invoice.paid_via}}{{invoice.paid_via}}{{else}}Confirmed by Studio{{/if}}</div>
+                <div class="value">{{#if invoice.paid_via}}{{invoice.paid_via}}{{else}}Confirmed by Studio{{/if}}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Transaction details — only rendered when payment data exists.
-             The Invoice Number is never replaced by this block: the two
-             identifiers serve different purposes and both appear in
-             their own place throughout this document. -->
-        {{#if invoice.payment}}
-        <div class="meta-bar" style="margin-top: 4mm;">
-          <div class="three-col">
-            <div class="info-block" style="margin: 0;">
-              <div class="label">Transaction ID</div>
-              <div class="value" style="font-size: 10.5pt;">{{invoice.payment.transaction_id}}</div>
-            </div>
-            <div class="info-block" style="margin: 0;">
-              <div class="label">Payment Date</div>
-              <div class="value" style="font-size: 10.5pt;">{{invoice.payment.date}}</div>
-            </div>
-            <div class="info-block" style="margin: 0;">
-              <div class="label">Amount Received</div>
-              <div class="value" style="font-size: 10.5pt;">{{invoice.currency}} {{invoice.total}}</div>
-            </div>
-          </div>
-        </div>
-        {{/if}}
-
         <div class="callout-note" style="margin-top: 4mm;">
-          <strong>Thank you.</strong> This invoice has been paid in full{{#if invoice.payment.method}} via {{invoice.payment.method}}{{else if invoice.paid_via}} via {{invoice.paid_via}}{{/if}}. No further action is required from you — we'll keep this on file for our records.
+          <strong>Thank you.</strong> This invoice has been paid in full{{#if invoice.paid_via}} via {{invoice.paid_via}}{{/if}}. No further action is required from you — we'll keep this on file for our records.
         </div>
       </div>
       {{else}}
@@ -954,8 +919,9 @@
                 <div class="label">Accepted Methods</div>
                 <div class="value" style="font-size: 10.5pt; margin-top: 2mm;">
                   <div class="payment-methods" style="margin-top: 1mm;">
-                    <span class="payment-chip">UPI</span>
-                    <span class="payment-chip">Bank Transfer</span>
+                    {{#each terms.payment_methods}}
+                    <span class="payment-chip">{{this}}</span>
+                    {{/each}}
                   </div>
                 </div>
               </div>
@@ -963,7 +929,7 @@
             <div>
               <div class="info-block" style="margin: 0;">
                 <div class="label">Payment Due Within</div>
-                <div class="value">7 Days of Invoice Date</div>
+                <div class="value">{{terms.payment_days}} Days of Invoice Date</div>
               </div>
             </div>
           </div>
@@ -977,7 +943,7 @@
             <strong>Due date.</strong> Payment must be received by <strong>{{invoice.due_date}}</strong>. Late payments may delay the project start date.
           </li>
           <li>
-            <strong>Late payments.</strong> Invoices unpaid after <strong>14 days</strong> from the due date will incur a late fee. The Studio reserves the right to pause scheduling until the outstanding balance is settled.
+            <strong>Late payments.</strong> If a payment is more than <strong>{{terms.late_payment_days}} days</strong> overdue, the Studio reserves the right to pause scheduling until the outstanding balance is settled.
           </li>
           {{#if invoice.is_advance}}
           <li>
@@ -1038,7 +1004,7 @@
             <div class="contact-row"><a href="tel:{{agency.contact.phone}}">{{agency.contact.phone}}</a></div>
             <div class="contact-row"><a href="mailto:{{agency.contact.email}}">{{agency.contact.email}}</a></div>
             <div class="contact-row" style="display:inline-flex;align-items:center;gap:6px;margin-top:1mm;">
-              <a href="https://instagram.com/aurevon.studios" target="_blank" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Instagram</a>
+              <a href="{{agency.social.instagram_url}}" target="_blank" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Instagram</a>
               <span style="color:rgba(255,255,255,0.3);">|</span>
               <a href="tel:{{agency.contact.phone}}" style="color:var(--gold-lt);text-decoration:none;font-weight:500;">Call</a>
             </div>
@@ -1054,7 +1020,7 @@
 
   <script>
     /* ── Shared PDF utility: ISO date → "19 June 2026" ─────────────────
-       Runs after Handlebars templating, before Puppeteer snapshot.
+       Runs after templating, just before window.print() further down.
     ──────────────────────────────────────────────────────────────────── */
     (function() {
       const MONTHS = [

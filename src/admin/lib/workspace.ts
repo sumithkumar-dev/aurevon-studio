@@ -531,7 +531,7 @@ export function autoPricingItems(
   // Launch & Handover
   items.push({
     id: ensureId("pi"),
-    label: "Launch & Handover — QA testing, Domain setup guidance, walkthrough session",
+    label: "Launch & Handover — QA testing, domain setup, walkthrough session",
     amount: 0,
   });
 

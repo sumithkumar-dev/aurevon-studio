@@ -65,6 +65,13 @@ import {
   hasWorkspaceTag,
 } from "../lib/workspace";
 import { formatCurrency, CURRENCY_OPTIONS } from "../lib/currency";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* ------------------------------------------------------------------ */
 /* Primitives                                                          */
@@ -287,17 +294,18 @@ function SelectInput<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as T)}
-      className={inputClass}
-    >
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
-      ))}
-    </select>
+    <Select value={value} onValueChange={(v) => onChange(v as T)}>
+      <SelectTrigger className={`${inputClass} h-auto shadow-none`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o} value={o}>
+            {o}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -311,17 +319,18 @@ function CurrencySelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <select
-      value={value ?? "₹"}
-      onChange={(e) => onChange(e.target.value)}
-      className={inputClass}
-    >
-      {CURRENCY_OPTIONS.map((o) => (
-        <option key={o.symbol} value={o.symbol}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <Select value={value ?? "₹"} onValueChange={onChange}>
+      <SelectTrigger className={`${inputClass} h-auto shadow-none`}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {CURRENCY_OPTIONS.map((o) => (
+          <SelectItem key={o.symbol} value={o.symbol}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -1835,27 +1844,28 @@ function PricingTab({
                     <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                       Paid via
                     </span>
-                    <select
-                      value={m.paid_via ?? ""}
-                      onChange={(e) =>
-                        updateMilestone(m.id, {
-                          paid_via: e.target.value || null,
-                        })
-                      }
-                      className={
-                        "rounded-md border bg-background px-2 py-1 text-sm text-foreground outline-none " +
-                        (m.paid_via ? "border-border" : "border-accent/60")
+                    <Select
+                      value={m.paid_via ?? undefined}
+                      onValueChange={(v) =>
+                        updateMilestone(m.id, { paid_via: v || null })
                       }
                     >
-                      <option value="" disabled>
-                        Select payment method…
-                      </option>
-                      {PAYMENT_METHOD_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        className={
+                          "h-auto w-auto min-w-[180px] gap-1 rounded-md border bg-background px-2 py-1 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40 " +
+                          (m.paid_via ? "border-border" : "border-accent/60")
+                        }
+                      >
+                        <SelectValue placeholder="Select payment method…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {!m.paid_via ? (
                       <span className="text-[11px] text-accent">
                         Pick how the client paid — this is what shows on the

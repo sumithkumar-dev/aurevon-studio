@@ -17,12 +17,30 @@ import {
   X,
   Type,
   Scissors,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import {
   newCallScriptBlock,
   type CallScriptBlock,
   type CallScriptBlockKind,
 } from "../lib/workspace";
+import {
+  fetchCallScripts,
+  createCallScript,
+  updateCallScript,
+  deleteCallScript,
+  type CallScript,
+  type CallScriptPatch,
+} from "../lib/callScripts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 
@@ -217,40 +235,11 @@ function saveReadingSize(v: ReadingSize) {
 }
 
 /* ── Script list view ────────────────────────────────────────────────── */
-
-type ScriptMeta = {
-  id: string;
-  name: string;
-  blocks: CallScriptBlock[];
-  updatedAt: string;
-};
-
-function blankScript(): ScriptMeta {
-  return {
-    id: uid(),
-    name: "New Script",
-    blocks: [],
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function loadScripts(): ScriptMeta[] {
-  try {
-    const raw = localStorage.getItem("aurevon_call_scripts");
-    if (!raw) return [];
-    return JSON.parse(raw) as ScriptMeta[];
-  } catch {
-    return [];
-  }
-}
-
-function saveScripts(scripts: ScriptMeta[]) {
-  try {
-    localStorage.setItem("aurevon_call_scripts", JSON.stringify(scripts));
-  } catch {
-    // ignore quota errors
-  }
-}
+/* Script content (name + blocks) is persisted in Supabase via
+   admin/lib/callScripts.ts — see fetchCallScripts/createCallScript/
+   updateCallScript/deleteCallScript below. Only ephemeral UI preferences
+   (which blocks are expanded, reading size) stay in localStorage, the same
+   way they did before. */
 
 /* ── Sub-components ─────────────────────────────────────────────────── */
 
@@ -258,10 +247,18 @@ function ScriptListView({
   scripts,
   onSelect,
   onCreate,
+  loading,
+  error,
+  onRetry,
+  creating,
 }: {
-  scripts: ScriptMeta[];
-  onSelect: (s: ScriptMeta) => void;
+  scripts: CallScript[];
+  onSelect: (s: CallScript) => void;
   onCreate: () => void;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  creating: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -279,13 +276,45 @@ function ScriptListView({
         </div>
         <button
           onClick={onCreate}
-          className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-2.5 text-sm font-medium hover:bg-accent/80 transition-colors"
+          disabled={creating}
+          className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-2.5 text-sm font-medium hover:bg-accent/80 transition-colors disabled:opacity-60"
         >
-          <Plus size={14} /> New Script
+          {creating ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Plus size={14} />
+          )}
+          New Script
         </button>
       </div>
 
-      {scripts.length === 0 ? (
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span className="flex items-center gap-2">
+            <AlertTriangle size={15} /> {error}
+          </span>
+          <button
+            onClick={onRetry}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-destructive/40 px-3 py-1.5 text-xs font-medium hover:bg-destructive/10 transition-colors"
+          >
+            <RefreshCw size={12} /> Retry
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-border bg-secondary/20 p-5"
+            >
+              <div className="h-4 w-1/3 rounded-full bg-secondary" />
+              <div className="mt-3 h-3 w-1/2 rounded-full bg-secondary/70" />
+            </div>
+          ))}
+        </div>
+      ) : scripts.length === 0 ? (
         <div className="surface-card flex flex-col items-center gap-5 py-16 text-center">
           <div className="grid size-16 place-items-center rounded-2xl border border-border bg-secondary text-accent">
             <PhoneCall size={26} />
@@ -323,7 +352,7 @@ function ScriptListView({
                 {s.name}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Updated {new Date(s.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                Updated {new Date(s.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {[...new Set(s.blocks.map((b) => b.kind))].slice(0, 4).map((k) => (
@@ -387,7 +416,7 @@ function BlockFocusModal({
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
-            className="min-w-0 flex-1 bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="min-w-0 flex-1 rounded-sm bg-transparent text-lg font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
             placeholder="Block title…"
           />
           <button
@@ -407,7 +436,7 @@ function BlockFocusModal({
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
-          className="flex-1 resize-none overflow-y-auto bg-transparent px-6 py-5 text-[15px] leading-[1.8] text-foreground placeholder:text-muted-foreground focus:outline-none"
+          className="flex-1 resize-none overflow-y-auto rounded-sm bg-transparent px-6 py-5 text-[15px] leading-[1.8] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-inset"
         />
         <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
           <span className="text-xs text-muted-foreground">
@@ -529,13 +558,13 @@ function useConfirmArm<T>(autoCancelMs = 3500, readyDelayMs = 400) {
 
 function ScriptEditor({
   script,
-  onSave,
+  onPatch,
   onDelete,
   onBack,
 }: {
-  script: ScriptMeta;
-  onSave: (s: ScriptMeta) => void;
-  onDelete: (id: string) => void;
+  script: CallScript;
+  onPatch: (id: string, patch: CallScriptPatch) => Promise<void>;
+  onDelete: (id: string) => void | Promise<void>;
   onBack: () => void;
 }) {
   const [name, setName] = useState(script.name);
@@ -546,7 +575,9 @@ function ScriptEditor({
   const [importing, setImporting] = useState(false);
   const [importText, setImportText] = useState("");
   const [readingSize, setReadingSize] = useState<ReadingSize>(loadReadingSize);
-  const [showSaved, setShowSaved] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [splitMenu, setSplitMenu] = useState<{
     blockId: string;
@@ -587,34 +618,91 @@ function ScriptEditor({
     persistExpanded(new Set());
   }
 
-  function persist(nextBlocks: CallScriptBlock[], nextName?: string) {
-    const updated: ScriptMeta = {
-      ...script,
-      name: nextName ?? name,
-      blocks: nextBlocks,
-      updatedAt: new Date().toISOString(),
-    };
-    onSave(updated);
+  // ── Saving to Supabase ─────────────────────────────────────────────
+  // Discrete actions (add/remove/move/import/split a block) save right
+  // away. Continuous typing (title/body text) is debounced so every
+  // keystroke doesn't fire its own network request — the same "commit
+  // shortly after the user stops typing" idea used elsewhere in the admin
+  // panel, just time-based instead of onBlur since scripts are edited
+  // continuously rather than field-by-field.
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blocksRef = useRef(blocks);
+  const nameRef = useRef(name);
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+  useEffect(() => {
+    nameRef.current = name;
+  }, [name]);
+
+  function flushSave(nextBlocks: CallScriptBlock[], finalName: string) {
+    setSaveStatus("saving");
+    onPatch(script.id, { name: finalName, blocks: nextBlocks })
+      .then(() => setSaveStatus("saved"))
+      .catch(() => setSaveStatus("error"));
+  }
+
+  function persist(
+    nextBlocks: CallScriptBlock[],
+    nextName?: string,
+    opts: { immediate?: boolean } = {},
+  ) {
     setBlocks(nextBlocks);
     if (nextName !== undefined) setName(nextName);
-    setShowSaved(true);
+    const finalName = nextName ?? name;
+
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    if (opts.immediate) {
+      flushSave(nextBlocks, finalName);
+    } else {
+      setSaveStatus("saving");
+      saveTimer.current = setTimeout(() => flushSave(nextBlocks, finalName), 700);
+    }
   }
 
   useEffect(() => {
-    if (!showSaved) return;
-    const t = setTimeout(() => setShowSaved(false), 1500);
+    if (saveStatus !== "saved") return;
+    const t = setTimeout(
+      () => setSaveStatus((s) => (s === "saved" ? "idle" : s)),
+      1500,
+    );
     return () => clearTimeout(t);
-  }, [showSaved]);
+  }, [saveStatus]);
+
+  // Best-effort flush of any pending debounced edit when leaving the editor
+  // (Back button, tab switch, unmount) so the last few keystrokes typed
+  // just before navigating away aren't lost.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        onPatch(script.id, {
+          name: nameRef.current,
+          blocks: blocksRef.current,
+        }).catch(() => {
+          // Nothing more to do — the user has already navigated away.
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function addBlock(kind: CallScriptBlockKind) {
     const nb = newCallScriptBlock(kind);
     const next = [...blocks, nb];
-    persist(next);
+    persist(next, undefined, { immediate: true });
     persistExpanded(new Set(expandedIds).add(nb.id));
   }
 
   function removeBlock(id: string) {
-    persist(blocks.filter((b) => b.id !== id));
+    persist(
+      blocks.filter((b) => b.id !== id),
+      undefined,
+      { immediate: true },
+    );
     const next = new Set(expandedIds);
     next.delete(id);
     persistExpanded(next);
@@ -622,9 +710,13 @@ function ScriptEditor({
     if (focusedBlockId === id) setFocusedBlockId(null);
   }
 
-  function updateBlock(id: string, patch: Partial<CallScriptBlock>) {
+  function updateBlock(
+    id: string,
+    patch: Partial<CallScriptBlock>,
+    opts: { immediate?: boolean } = {},
+  ) {
     const next = blocks.map((b) => (b.id === id ? { ...b, ...patch } : b));
-    persist(next);
+    persist(next, undefined, opts);
   }
 
   function moveBlock(id: string, dir: -1 | 1) {
@@ -634,19 +726,19 @@ function ScriptEditor({
     const swap = idx + dir;
     if (swap < 0 || swap >= next.length) return;
     [next[idx], next[swap]] = [next[swap], next[idx]];
-    persist(next);
+    persist(next, undefined, { immediate: true });
   }
 
   function loadStarter() {
     const starter = STARTER_SCRIPT.map((s) => ({ ...s, id: uid() }));
-    persist(starter);
+    persist(starter, undefined, { immediate: true });
     persistExpanded(new Set(starter.map((s) => s.id)));
   }
 
   function handleImport() {
     if (!importText.trim()) return;
     const nb: CallScriptBlock = { ...wrapAsSingleBlock(importText), id: uid() };
-    persist([...blocks, nb]);
+    persist([...blocks, nb], undefined, { immediate: true });
     persistExpanded(new Set(expandedIds).add(nb.id));
     setImportText("");
     setImporting(false);
@@ -696,7 +788,7 @@ function ScriptEditor({
     const next = [...blocks];
     next[idx] = { ...block, body: remaining };
     next.splice(idx + 1, 0, newBlock);
-    persist(next);
+    persist(next, undefined, { immediate: true });
     persistExpanded(new Set(expandedIds).add(newBlock.id));
   }
 
@@ -924,23 +1016,32 @@ function ScriptEditor({
           </button>
           <input
             value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              persist(blocks, e.target.value);
-            }}
+            onChange={(e) => persist(blocks, e.target.value)}
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
             className="bg-transparent text-xl font-medium text-foreground focus:outline-none border-b border-transparent focus:border-accent/40 transition-colors pb-0.5"
             placeholder="Script name…"
           />
-          <span
-            className={`text-[11px] text-muted-foreground/70 transition-opacity duration-500 ${
-              showSaved ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            Saved
-          </span>
+          {saveStatus === "saving" && (
+            <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+              <Loader2 size={11} className="animate-spin" /> Saving…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="text-[11px] text-muted-foreground/70 transition-opacity duration-500">
+              Saved
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <button
+              onClick={() => flushSave(blocks, name)}
+              className="flex items-center gap-1.5 text-[11px] font-medium text-destructive hover:underline"
+              title="Click to retry saving"
+            >
+              <AlertTriangle size={11} /> Not saved — retry
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -1080,21 +1181,29 @@ function ScriptEditor({
                   </div>
 
                   {/* Kind */}
-                  <select
+                  <Select
                     value={block.kind}
-                    onChange={(e) =>
-                      updateBlock(block.id, {
-                        kind: e.target.value as CallScriptBlockKind,
-                      })
+                    onValueChange={(v) =>
+                      updateBlock(
+                        block.id,
+                        { kind: v as CallScriptBlockKind },
+                        { immediate: true },
+                      )
                     }
-                    className={`shrink-0 cursor-pointer rounded-full border bg-transparent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider focus:outline-none ${KIND_COLORS[block.kind]}`}
                   >
-                    {KIND_ORDER.map((k) => (
-                      <option key={k} value={k} className="text-foreground bg-background">
-                        {KIND_LABELS[k]}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      className={`h-auto w-auto shrink-0 gap-1 rounded-full border bg-transparent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-none focus:ring-2 focus:ring-ring/60 focus:ring-offset-0 ${KIND_COLORS[block.kind]}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KIND_ORDER.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {KIND_LABELS[k]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
                   {/* Title */}
                   <input
@@ -1105,7 +1214,7 @@ function ScriptEditor({
                     spellCheck={false}
                     autoCorrect="off"
                     autoCapitalize="off"
-                    className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
+                    className="min-w-0 flex-1 rounded-sm bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
                     placeholder="Block title…"
                   />
 
@@ -1232,38 +1341,92 @@ function ScriptEditor({
 /* ── Main export ──────────────────────────────────────────────────────── */
 
 export function CallScriptPage() {
-  const [scripts, setScripts] = useState<ScriptMeta[]>(loadScripts);
-  const [active, setActive] = useState<ScriptMeta | null>(null);
+  const [scripts, setScripts] = useState<CallScript[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  function persistAll(next: ScriptMeta[]) {
-    setScripts(next);
-    saveScripts(next);
+  async function load({ quiet = false }: { quiet?: boolean } = {}) {
+    if (!quiet) setLoading(true);
+    setError(null);
+    try {
+      setScripts(await fetchCallScripts());
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load call scripts.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleCreate() {
-    const s = blankScript();
-    persistAll([...scripts, s]);
-    setActive(s);
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function handleCreate() {
+    setCreating(true);
+    setError(null);
+    try {
+      const created = await createCallScript();
+      setScripts((prev) => [created, ...prev]);
+      setActiveId(created.id);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to create script.",
+      );
+    } finally {
+      setCreating(false);
+    }
   }
 
-  function handleSave(updated: ScriptMeta) {
-    const next = scripts.map((s) => (s.id === updated.id ? updated : s));
-    persistAll(next);
-    setActive(updated);
+  // Optimistic update, same pattern as patchLead/patchClient in Dashboard.tsx:
+  // apply the change locally right away, then persist; on failure, re-fetch
+  // from the DB so the UI never silently diverges from what's actually saved.
+  async function patchScript(id: string, patch: CallScriptPatch) {
+    setScripts((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, ...patch, updated_at: new Date().toISOString() }
+          : s,
+      ),
+    );
+    try {
+      await updateCallScript(id, patch);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to save script.",
+      );
+      load({ quiet: true });
+      throw err;
+    }
   }
 
-  function handleDelete(id: string) {
-    persistAll(scripts.filter((s) => s.id !== id));
-    setActive(null);
+  async function handleDelete(id: string) {
+    const prevScripts = scripts;
+    setScripts((prev) => prev.filter((s) => s.id !== id));
+    setActiveId(null);
+    try {
+      await deleteCallScript(id);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete script.",
+      );
+      setScripts(prevScripts);
+    }
   }
+
+  const active = activeId ? scripts.find((s) => s.id === activeId) ?? null : null;
 
   if (active) {
     return (
       <ScriptEditor
+        key={active.id}
         script={active}
-        onSave={handleSave}
+        onPatch={patchScript}
         onDelete={handleDelete}
-        onBack={() => setActive(null)}
+        onBack={() => setActiveId(null)}
       />
     );
   }
@@ -1271,8 +1434,12 @@ export function CallScriptPage() {
   return (
     <ScriptListView
       scripts={scripts}
-      onSelect={setActive}
+      onSelect={(s) => setActiveId(s.id)}
       onCreate={handleCreate}
+      loading={loading}
+      error={error}
+      onRetry={() => load()}
+      creating={creating}
     />
   );
 }
