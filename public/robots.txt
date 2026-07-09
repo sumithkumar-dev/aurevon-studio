@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://aurevon.studios/sitemap.xml
+Sitemap: https://aurevon-studio.vercel.app/sitemap.xml
