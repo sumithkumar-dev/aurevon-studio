@@ -1,23 +1,22 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://aurevon.studios/</loc>
+    <loc>https://aurevon-studio.vercel.app/</loc>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://aurevon.studios/services</loc>
+    <loc>https://aurevon-studio.vercel.app/services</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://aurevon.studios/portfolio</loc>
+    <loc>https://aurevon-studio.vercel.app/portfolio</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://aurevon.studios/process</loc>
+    <loc>https://aurevon-studio.vercel.app/process</loc>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://aurevon.studios/contact</loc>
+    <loc>https://aurevon-studio.vercel.app/contact</loc>
     <priority>0.8</priority>
   </url>
 </urlset>
