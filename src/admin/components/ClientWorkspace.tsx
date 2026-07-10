@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowUpDown,
   Briefcase,
   Building2,
   CalendarClock,
@@ -281,6 +282,44 @@ function MilestoneAmountInput({
       }}
       className={className}
     />
+  );
+}
+
+/** One-shot "sort now" menu: picking an option reorders the underlying
+ *  list immediately (persisted like any other edit) and the trigger then
+ *  resets back to its placeholder, so it always reads as an action rather
+ *  than a sticky mode — and the same option can be picked again later
+ *  (e.g. after adding a new item) to re-apply the sort. */
+function SortMenu({
+  options,
+  onSort,
+  label = "Sort",
+}: {
+  options: { value: string; label: string }[];
+  onSort: (value: string) => void;
+  label?: string;
+}) {
+  const [value, setValue] = useState<string | undefined>(undefined);
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => {
+        onSort(v);
+        setValue(undefined);
+      }}
+    >
+      <SelectTrigger className="h-auto w-auto min-w-0 gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-none hover:bg-secondary hover:text-foreground">
+        <ArrowUpDown size={13} />
+        <SelectValue placeholder={label} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -771,7 +810,7 @@ export function ClientWorkspace({
   }, [tab, client.id]);
 
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-background">
+    <div className="fixed inset-0 z-40 overflow-y-auto bg-background [scrollbar-gutter:stable]">
       {/* Workspace header */}
       <div className="sticky top-0 z-10 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="container-aurevon flex flex-col gap-3 py-3 md:py-4">
@@ -1355,7 +1394,7 @@ function TimelineTab({
             type="button"
             onClick={() =>
               onPatchWorkspace({
-                timeline: [...workspace.timeline, newTimelineEntry()],
+                timeline: [...workspace.timeline, newTimelineEntry(workspace.timeline)],
               })
             }
             className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent-glow transition-colors"
@@ -1510,6 +1549,42 @@ function PricingTab({
     });
   }
 
+  function sortPricingItems(mode: string) {
+    const sorted = [...workspace.pricing_items].sort((a, b) => {
+      switch (mode) {
+        case "label-asc":
+          return a.label.localeCompare(b.label);
+        case "label-desc":
+          return b.label.localeCompare(a.label);
+        case "amount-desc":
+          return b.amount - a.amount;
+        case "amount-asc":
+          return a.amount - b.amount;
+        default:
+          return 0;
+      }
+    });
+    onPatchWorkspace({ pricing_items: sorted });
+  }
+
+  function sortMilestones(mode: string) {
+    const sorted = [...workspace.milestones].sort((a, b) => {
+      switch (mode) {
+        case "due-asc":
+          return (a.due ?? "").localeCompare(b.due ?? "");
+        case "due-desc":
+          return (b.due ?? "").localeCompare(a.due ?? "");
+        case "amount-desc":
+          return b.amount - a.amount;
+        case "amount-asc":
+          return a.amount - b.amount;
+        default:
+          return 0;
+      }
+    });
+    onPatchWorkspace({ milestones: sorted });
+  }
+
   const totalPrice = workspace.total_price ?? client.final_price ?? 0;
 
   return (
@@ -1633,6 +1708,17 @@ function PricingTab({
         Icon={Tag}
         actions={
           <div className="flex items-center gap-2">
+            {workspace.pricing_items.length > 1 && (
+              <SortMenu
+                onSort={sortPricingItems}
+                options={[
+                  { value: "label-asc", label: "Name (A–Z)" },
+                  { value: "label-desc", label: "Name (Z–A)" },
+                  { value: "amount-desc", label: "Amount (High → Low)" },
+                  { value: "amount-asc", label: "Amount (Low → High)" },
+                ]}
+              />
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1737,6 +1823,17 @@ function PricingTab({
         Icon={CheckCircle2}
         actions={
           <div className="flex items-center gap-2">
+            {workspace.milestones.length > 1 && (
+              <SortMenu
+                onSort={sortMilestones}
+                options={[
+                  { value: "due-asc", label: "Due date (earliest first)" },
+                  { value: "due-desc", label: "Due date (latest first)" },
+                  { value: "amount-desc", label: "Amount (High → Low)" },
+                  { value: "amount-asc", label: "Amount (Low → High)" },
+                ]}
+              />
+            )}
             <button
               type="button"
               onClick={() =>

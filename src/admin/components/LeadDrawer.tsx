@@ -148,7 +148,7 @@ export function LeadDrawer({
         </div>
 
         {/* BODY */}
-        <div className="flex-1 overflow-y-auto p-5 md:p-6">
+        <div className="flex-1 overflow-y-auto p-5 md:p-6 [scrollbar-gutter:stable]">
           {/* CONTACT INFORMATION */}
           <div className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
             Contact information

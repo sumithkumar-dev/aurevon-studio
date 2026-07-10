@@ -875,14 +875,36 @@ export async function generateAndPrint(
   const blob = new Blob([htmlWithFlag], { type: "text/html; charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
-  const tab = window.open(url, "_blank");
-
-  // Revoke the Blob URL once the tab has loaded (2 s is ample for local blobs).
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  // IMPORTANT: open a blank tab first, then sever its `opener` link before
+  // navigating it — do NOT just pass "noopener" to window.open(). Two
+  // separate problems, one fix:
+  //   1. window.open(url, "_blank") with no opener-severing keeps the new
+  //      tab linked to (and, in Chromium, often sharing a renderer process
+  //      with) this tab. The template's auto-print script calls
+  //      window.print(), a *blocking* call in whichever tab runs it — when
+  //      the two tabs share a process, that block can freeze this CRM tab
+  //      too (buttons stop responding, even a reload lags) until the print
+  //      dialog / tab is dismissed.
+  //   2. Passing the "noopener" feature string directly to window.open()
+  //      fixes that, but per spec it then always returns null — success or
+  //      popup-blocked alike — so we could no longer tell the two apart to
+  //      show the "please allow pop-ups" error below.
+  // Opening blank first keeps a real handle (so blocked-popup detection
+  // still works), and nulling `opener` before navigating still puts the
+  // tab in its own independent browsing context, so it can never tie up
+  // this tab's renderer.
+  const tab = window.open("", "_blank");
 
   if (!tab) {
+    URL.revokeObjectURL(url);
     throw new Error(
       "Could not open a new tab. Please allow pop-ups for this site and try again.",
     );
   }
+
+  tab.opener = null;
+  tab.location.href = url;
+
+  // Revoke the Blob URL once the tab has loaded (2 s is ample for local blobs).
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }

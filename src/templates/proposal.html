@@ -38,7 +38,7 @@
         --pad-x: 14mm;
         --pad-y: 18mm;
         --bar: 5px; /* gold left bar width */
-        --footer-h: 16mm; /* reserved space for the repeating footer */
+        --footer-h: 0mm; /* footer removed; var kept in case spacing is needed later */
       }
 
       html,
@@ -765,8 +765,8 @@
             transparent 0px,
             transparent 6mm,
             var(--gold) 6mm,
-            var(--gold) calc(6mm + 5px),
-            transparent calc(6mm + 5px)
+            var(--gold) 7.323mm,
+            transparent 7.323mm
           ) !important;
           background-attachment: fixed !important;
           -webkit-print-color-adjust: exact !important;
@@ -1175,12 +1175,6 @@
         </div>
       </div>
 
-      <div class="page-footer">
-        <span
-          ><span class="agency-name">{{agency.name}}</span> · Confidential</span
-        >
-        <span>{{client.business_name}} — Web Design Proposal · {{proposal.id}}</span>
-      </div>
     </div>
 
   <script>

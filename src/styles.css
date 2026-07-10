@@ -70,6 +70,13 @@
   html {
     color-scheme: dark;
     overflow-x: hidden;
+    /* Always reserve the vertical scrollbar's space so it never needs to be
+       added/removed on the fly. Radix Select/Dialog/AlertDialog lock body
+       scroll while open (removing the scrollbar) and unlock it on close
+       (restoring it); without a permanently reserved gutter, that toggle
+       changes the available content width each time and the page visibly
+       nudges left/right. This keeps the width constant regardless. */
+    scrollbar-gutter: stable;
     text-size-adjust: 100%;
   }
   * {

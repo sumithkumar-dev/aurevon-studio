@@ -101,7 +101,7 @@ export function AddLeadDialog({
 
         <form
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto p-5 space-y-4"
+          className="flex-1 overflow-y-auto p-5 space-y-4 [scrollbar-gutter:stable]"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">

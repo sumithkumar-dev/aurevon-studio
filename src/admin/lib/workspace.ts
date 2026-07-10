@@ -290,14 +290,28 @@ export function serializeWorkspace(payload: WorkspacePayload): string {
   return JSON.stringify({ [WORKSPACE_TAG]: 1, ...payload });
 }
 
-export function newTimelineEntry(): WorkspaceTimelineEntry {
+export function newTimelineEntry(
+  existing: WorkspaceTimelineEntry[] = [],
+): WorkspaceTimelineEntry {
+  // Continue the schedule from the last phase's end date (if any), so a
+  // freshly-added phase doesn't start with a blank/disconnected date.
+  const lastEnd = existing.length
+    ? existing[existing.length - 1].end
+    : null;
+  const startBase = lastEnd
+    ? new Date(lastEnd)
+    : new Date();
+  if (lastEnd) startBase.setDate(startBase.getDate() + 1);
+  const start = startBase.toISOString().slice(0, 10);
+  const end = new Date(startBase);
+  end.setDate(end.getDate() + 6); // default 1-week span, editable after
   return {
     id: ensureId("tl"),
     phase: "",
-    start: null,
-    end: null,
-    notes: null,
-    client_action: null,
+    start,
+    end: end.toISOString().slice(0, 10),
+    notes: "Details for this phase of the engagement.",
+    client_action: "Review deliverables and provide feedback within 3 business days",
   };
 }
 export function newPricingItem(): WorkspacePricingItem {
@@ -358,21 +372,65 @@ export function suggestClientAction(phase: string): string {
   return "Review deliverables and provide feedback within 3 business days";
 }
 
+/** "What Happens" description shown for each phase, keyed the same way as
+ *  PHASE_CLIENT_ACTIONS above, so every default/newly-added phase can be
+ *  auto-filled with a sensible description instead of starting blank. */
+const PHASE_NOTES: Record<string, string> = {
+  discovery:
+    "Kickoff call, brand & content collection, and site structure/sitemap planning.",
+  design:
+    "Wireframes and visual design concepts for key pages, refined from your feedback.",
+  development:
+    "Building out all pages, integrations, and functionality on a private staging site.",
+  launch:
+    "Final QA pass, domain/hosting setup, and going live on your domain.",
+  review:
+    "The Studio reviews the live site end-to-end and fixes any issues found.",
+  revision:
+    "The Studio implements the requested changes and shares an updated preview.",
+  testing:
+    "Cross-browser and cross-device testing across mobile, tablet, and desktop.",
+  handover:
+    "Credentials, documentation, and training are handed over to your team.",
+};
+
+/** Returns a suggested "what happens" note for a given phase name. */
+export function suggestPhaseNotes(phase: string): string {
+  const key = phase.toLowerCase().replace(/[^a-z]/g, "");
+  for (const [k, note] of Object.entries(PHASE_NOTES)) {
+    if (key.includes(k)) return note;
+  }
+  return "Details for this phase of the engagement.";
+}
+
+/** Returns an ISO date string (YYYY-MM-DD) offset by `days` from today. */
+function isoDateOffset(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export function defaultTimelinePhases(): WorkspaceTimelineEntry[] {
   const phases = [
-    { name: "Discovery", action: PHASE_CLIENT_ACTIONS.discovery },
-    { name: "Design", action: PHASE_CLIENT_ACTIONS.design },
-    { name: "Development", action: PHASE_CLIENT_ACTIONS.development },
-    { name: "Launch", action: PHASE_CLIENT_ACTIONS.launch },
+    { name: "Discovery", action: PHASE_CLIENT_ACTIONS.discovery, notes: PHASE_NOTES.discovery, days: 5 },
+    { name: "Design", action: PHASE_CLIENT_ACTIONS.design, notes: PHASE_NOTES.design, days: 7 },
+    { name: "Development", action: PHASE_CLIENT_ACTIONS.development, notes: PHASE_NOTES.development, days: 14 },
+    { name: "Launch", action: PHASE_CLIENT_ACTIONS.launch, notes: PHASE_NOTES.launch, days: 3 },
   ];
-  return phases.map(({ name, action }) => ({
-    id: ensureId("tl"),
-    phase: name,
-    start: null,
-    end: null,
-    notes: null,
-    client_action: action,
-  }));
+  let cursor = 0; // running day-offset from today
+  return phases.map(({ name, action, notes, days }) => {
+    const start = isoDateOffset(cursor);
+    const end = isoDateOffset(cursor + days - 1);
+    cursor += days;
+    return {
+      id: ensureId("tl"),
+      phase: name,
+      start,
+      end,
+      notes,
+      client_action: action,
+    };
+  });
 }
 
 /* ── Industry-based goal suggestions ─────────────────────────────── */
@@ -559,14 +617,14 @@ export function defaultMilestones(
     {
       id: ensureId("ms"),
       label: "50% Advance — On project kickoff",
-      due: null,
+      due: isoDateOffset(0),
       amount: advance,
       paid: false,
     },
     {
       id: ensureId("ms"),
       label: "50% Final — On project delivery",
-      due: null,
+      due: isoDateOffset(28),
       amount: final,
       paid: false,
     },
@@ -620,6 +678,20 @@ export function applyWorkspaceDefaults(
   // 3. Goals — auto-suggest based on industry if empty
   if (!next.goals || next.goals.length === 0) {
     next.goals = suggestGoalsForIndustry(seed.industry);
+    changed = true;
+  }
+
+  // 3b. Deliverables — pre-tick the standard suggested set if empty, so the
+  //     checklist isn't presented fully blank/unchecked. The admin can still
+  //     untick anything that doesn't apply to this project.
+  if (!next.deliverables || next.deliverables.length === 0) {
+    next.deliverables = [...SUGGESTED_DELIVERABLES];
+    changed = true;
+  }
+
+  // 3c. Exclusions — same as Deliverables: pre-tick the standard set.
+  if (!next.exclusions || next.exclusions.length === 0) {
+    next.exclusions = [...SUGGESTED_EXCLUSIONS];
     changed = true;
   }
 
