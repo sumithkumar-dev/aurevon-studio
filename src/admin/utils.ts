@@ -64,6 +64,39 @@ export function toDateInputValue(date: string | null): string {
   return date.slice(0, 10);
 }
 
+/**
+ * Formats a timestamp for an <input type="datetime-local"> value
+ * ("YYYY-MM-DDTHH:mm"), using the browser's local timezone so the picker
+ * shows the time the way the person reading it would expect (e.g. the
+ * "6pm" a lead actually asked to be called at, not a UTC-shifted hour).
+ */
+export function toDateTimeInputValue(date: string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Converts a raw <input type="datetime-local"> value back into an ISO
+ * timestamp for saving. Returns null for an empty value so "clear" works.
+ */
+export function fromDateTimeInputValue(value: string): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+/** Just the time portion, e.g. "6:00 PM" — for pairing next to a relative day label. */
+export function formatTime(date: string) {
+  return new Date(date).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 /** Midnight-aligned day difference: negative = past, 0 = today, positive = future. */
 function dayDiff(dateStr: string): number {
   const today = new Date();

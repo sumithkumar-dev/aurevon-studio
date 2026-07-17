@@ -13,7 +13,7 @@ import {
 import { PRIORITY_OPTIONS } from "../constants";
 import type { Lead, LeadPatch, LeadPriority } from "../types";
 import {
-  formatDate,
+  formatDateTime,
   isOverdue,
   isToday,
   priorityClasses,
@@ -206,7 +206,7 @@ function LeadCard({
   const dueToday = isToday(followUp);
 
   return (
-    <div className="surface-card group p-3.5" onClick={onSelect}>
+    <div className="surface-card group p-3.5 cursor-pointer" onClick={onSelect}>
       <div className="flex items-start gap-2">
         <span className="mt-1 shrink-0 text-muted-foreground/50">
           <GripVertical size={14} />
@@ -310,7 +310,7 @@ function LeadCard({
               }`}
             >
               <CalendarClock size={11} />
-              Follow up {relativeDayLabel(followUp)} ({formatDate(followUp)})
+              Follow up {relativeDayLabel(followUp)} ({formatDateTime(followUp)})
             </div>
           )}
         </div>

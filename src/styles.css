@@ -79,8 +79,49 @@
     scrollbar-gutter: stable;
     text-size-adjust: 100%;
   }
+  /* The `scrollbar-gutter: stable` above was meant to stop the page from
+     nudging left/right, but on its own it doesn't — and it's the reason the
+     nudge still happens on every dropdown/select/dialog open. Radix locks
+     scroll by measuring `window.innerWidth - document.documentElement.clientWidth`
+     and adding that as `margin-right` to <body> (via its injected
+     `body[data-scroll-locked]` rule) to compensate for the scrollbar it
+     hides. Because the gutter above is *always* reserved — whether or not
+     the page actually has a scrollbar — that measurement is never zero, so
+     Radix adds this extra margin on *every* open and removes it on every
+     close, even on short pages that never had a scrollbar to begin with.
+     That's the visible wobble. The gutter already reserves the space
+     permanently, so Radix's own compensation is redundant; zero it out.
+     Specificity (html + attribute) beats Radix's injected
+     `body[data-scroll-locked]` rule regardless of which is inserted into
+     the document later. */
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
   * {
     border-color: var(--color-border);
+  }
+  /* Native <button> elements (and other interactive controls) show the
+     default arrow cursor unless told otherwise — only <a href> gets a
+     pointer cursor for free from the browser. Apply the hand cursor
+     everywhere something is clickable so it's obvious at a glance,
+     app-wide. Disabled controls keep a "not allowed" cursor instead. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  select,
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
   }
   body {
     background-color: var(--color-background);

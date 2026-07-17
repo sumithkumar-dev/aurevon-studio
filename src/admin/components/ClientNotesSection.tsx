@@ -6,12 +6,15 @@ import {
   fetchClientNotes,
 } from "../lib/clients";
 import type { ClientNote } from "../types";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 
 export function ClientNotesSection({ clientId }: { clientId: string }) {
   const [notes, setNotes] = useState<ClientNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -38,13 +41,19 @@ export function ClientNotesSection({ clientId }: { clientId: string }) {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setDeleting(true);
     const prev = notes;
     setNotes((n) => n.filter((x) => x.id !== id));
     try {
       await deleteClientNote(id);
+      setPendingDeleteId(null);
     } catch {
       setNotes(prev);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -95,7 +104,7 @@ export function ClientNotesSection({ clientId }: { clientId: string }) {
                   {new Date(n.created_at).toLocaleString()}
                 </span>
                 <button
-                  onClick={() => handleDelete(n.id)}
+                  onClick={() => setPendingDeleteId(n.id)}
                   className="text-xs text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                 >
                   Delete
@@ -105,6 +114,15 @@ export function ClientNotesSection({ clientId }: { clientId: string }) {
           ))
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(isOpen) => !isOpen && setPendingDeleteId(null)}
+        title="Delete this note?"
+        description="This permanently removes the note. This action cannot be undone."
+        loading={deleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

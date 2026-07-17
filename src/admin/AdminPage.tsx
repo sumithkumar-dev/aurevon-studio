@@ -6,34 +6,19 @@ import { LoginScreen } from "./components/LoginScreen";
 import { Dashboard } from "./components/Dashboard";
 
 export function AdminPage() {
-  useMeta({ title: "Admin - Aurevon", noindex: true });
-  const [session, setSession] = useState<{
-    email?: string | null;
-    fullName?: string | null;
-  } | null>(null);
+  useMeta({ title: "Admin - AUREVON", noindex: true });
+  const [session, setSession] = useState<{ email?: string | null } | null>(
+    null,
+  );
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setSession(
-        data.session
-          ? {
-              email: data.session.user.email,
-              fullName: data.session.user.user_metadata?.full_name,
-            }
-          : null,
-      );
+      setSession(data.session ? { email: data.session.user.email } : null);
       setChecking(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(
-        s
-          ? {
-              email: s.user.email,
-              fullName: s.user.user_metadata?.full_name,
-            }
-          : null,
-      );
+      setSession(s ? { email: s.user.email } : null);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -50,5 +35,5 @@ export function AdminPage() {
   }
 
   if (!session) return <LoginScreen />;
-  return <Dashboard email={session.email ?? ""} fullName={session.fullName} />;
+  return <Dashboard email={session.email ?? ""} />;
 }

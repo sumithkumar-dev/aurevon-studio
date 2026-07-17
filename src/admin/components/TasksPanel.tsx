@@ -3,6 +3,7 @@ import { Check, Loader2, Plus, Trash2 } from "lucide-react";
 import { createTask, deleteTask, fetchTasks, toggleTask } from "../lib/tasks";
 import type { TimelineEntityType, Task } from "../types";
 import { isOverdue, isToday, relativeDayLabel, toDateInputValue } from "../utils";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 
 export function TasksPanel({
   entityType,
@@ -18,6 +19,8 @@ export function TasksPanel({
   const [newTitle, setNewTitle] = useState("");
   const [newDue, setNewDue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -58,13 +61,19 @@ export function TasksPanel({
     }
   }
 
-  async function handleDelete(id: string) {
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setDeleting(true);
     const prev = tasks;
     setTasks((t) => t.filter((x) => x.id !== id));
     try {
       await deleteTask(id);
+      setPendingDeleteId(null);
     } catch {
       setTasks(prev);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -123,7 +132,7 @@ export function TasksPanel({
                 key={task.id}
                 task={task}
                 onToggle={() => handleToggle(task)}
-                onDelete={() => handleDelete(task.id)}
+                onDelete={() => setPendingDeleteId(task.id)}
               />
             ))}
             {done.length > 0 && (
@@ -137,7 +146,7 @@ export function TasksPanel({
                       key={task.id}
                       task={task}
                       onToggle={() => handleToggle(task)}
-                      onDelete={() => handleDelete(task.id)}
+                      onDelete={() => setPendingDeleteId(task.id)}
                     />
                   ))}
                 </div>
@@ -146,6 +155,15 @@ export function TasksPanel({
           </>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(isOpen) => !isOpen && setPendingDeleteId(null)}
+        title="Delete this task?"
+        description="This permanently removes the task. This action cannot be undone."
+        loading={deleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

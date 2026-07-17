@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 
 function dateKey(iso: string) {
   return iso.slice(0, 10);
@@ -69,6 +70,8 @@ export function Timeline({
   const [saving, setSaving] = useState(false);
   const [eventType, setEventType] = useState<string>(eventTypeOptions[0] ?? "note");
   const [body, setBody] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -101,13 +104,19 @@ export function Timeline({
     }
   }
 
-  async function handleDelete(id: string) {
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setDeleting(true);
     const prev = events;
     setEvents((e) => e.filter((x) => x.id !== id));
     try {
       await deleteTimelineEvent(id);
+      setPendingDeleteId(null);
     } catch {
       setEvents(prev);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -198,7 +207,7 @@ export function Timeline({
                             ) : null}
                           </div>
                           <button
-                            onClick={() => handleDelete(ev.id)}
+                            onClick={() => setPendingDeleteId(ev.id)}
                             className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                             aria-label="Delete entry"
                           >
@@ -217,6 +226,15 @@ export function Timeline({
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(pendingDeleteId)}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+        title="Delete this entry?"
+        description="This permanently removes this timeline entry. This action cannot be undone."
+        loading={deleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

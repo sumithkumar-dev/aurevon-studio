@@ -1,6 +1,12 @@
 import { CalendarClock, MessageCircle, Phone, Trash2 } from "lucide-react";
 import type { Lead, LeadPatch } from "../types";
-import { formatDate, isOverdue, isToday, relativeDayLabel } from "../utils";
+import {
+  formatDate,
+  formatDateTime,
+  isOverdue,
+  isToday,
+  relativeDayLabel,
+} from "../utils";
 import { PriorityBadge, PrioritySelect, StatusSelect } from "./badges";
 
 export function LeadTable({
@@ -92,6 +98,7 @@ export function LeadTable({
                   <td className="px-4 py-4 whitespace-nowrap">
                     {followUp ? (
                       <span
+                        title={formatDateTime(followUp)}
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${
                           overdue
                             ? "border-rose-400/30 bg-rose-400/10 text-rose-200"

@@ -12,7 +12,12 @@ import {
   X,
 } from "lucide-react";
 import type { Client, Lead, LeadPatch } from "../types";
-import { formatDateTime, toDateInputValue } from "../utils";
+import {
+  formatDateTime,
+  fromDateTimeInputValue,
+  toDateInputValue,
+  toDateTimeInputValue,
+} from "../utils";
 import {
   BEST_TIME_TO_CALL_OPTIONS,
   LEAD_TIMELINE_EVENT_TYPES,
@@ -242,15 +247,20 @@ export function LeadDrawer({
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent/60"
               />
             </ControlPanel>
-            <ControlPanel label="Next follow-up date">
+            <ControlPanel label="Next follow-up">
               <input
-                type="date"
-                value={toDateInputValue(lead.next_followup_date)}
+                type="datetime-local"
+                value={toDateTimeInputValue(lead.next_followup_date)}
                 onChange={(e) =>
-                  onPatch({ next_followup_date: e.target.value || null })
+                  onPatch({
+                    next_followup_date: fromDateTimeInputValue(e.target.value),
+                  })
                 }
                 className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:border-accent/60"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Set the time if they gave one — e.g. "call me evening 6pm".
+              </p>
             </ControlPanel>
           </div>
         </div>

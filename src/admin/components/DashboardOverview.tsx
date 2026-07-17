@@ -11,6 +11,7 @@ import { FUNNEL_STATUSES } from "../constants";
 import type { Client, Lead } from "../types";
 import {
   formatDate,
+  formatTime,
   isOverdue,
   isToday,
   isUpcoming,
@@ -82,7 +83,14 @@ function FollowUpList({
                 {lead.business_name || "Untitled business"}
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {lead.next_followup_date && relativeDayLabel(lead.next_followup_date)}
+                {lead.next_followup_date && (
+                  <>
+                    {relativeDayLabel(lead.next_followup_date)}{" "}
+                    <span className="text-muted-foreground/70">
+                      {formatTime(lead.next_followup_date)}
+                    </span>
+                  </>
+                )}
               </span>
             </button>
           ))
