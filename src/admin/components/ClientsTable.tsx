@@ -1,6 +1,6 @@
-import { Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import type { Client, ProjectStatus } from "../types";
-import { formatDate, projectStatusClasses } from "../utils";
+import { formatDate, isOverdue, isUpcoming, projectStatusClasses } from "../utils";
 import { PROJECT_STATUS_OPTIONS } from "../constants";
 import {
   Select,
@@ -46,6 +46,35 @@ export function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
   );
 }
 
+/** Soonest of domain/hosting expiry — or null if nothing's expiring soon. */
+function nextRenewal(c: Client): { label: string; date: string; overdue: boolean } | null {
+  const candidates: { label: string; date: string }[] = [];
+  if (c.domain_expiry) candidates.push({ label: "Domain", date: c.domain_expiry });
+  if (c.hosting_expiry) candidates.push({ label: "Hosting", date: c.hosting_expiry });
+  const soon = candidates
+    .filter((r) => isOverdue(r.date) || isUpcoming(r.date, 30))
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  if (!soon) return null;
+  return { ...soon, overdue: isOverdue(soon.date) };
+}
+
+function RenewalCell({ client }: { client: Client }) {
+  const renewal = nextRenewal(client);
+  if (!renewal) return <span className="text-muted-foreground">—</span>;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${
+        renewal.overdue
+          ? "border-rose-400/30 bg-rose-400/10 text-rose-200"
+          : "border-amber-400/30 bg-amber-400/10 text-amber-200"
+      }`}
+    >
+      <AlertTriangle size={11} />
+      {renewal.label} · {formatDate(renewal.date)}
+    </span>
+  );
+}
+
 export function ClientsTable({
   clients,
   onSelect,
@@ -68,6 +97,7 @@ export function ClientsTable({
               <th className="px-4 py-3 font-medium">Business</th>
               <th className="px-4 py-3 font-medium">Final Budget</th>
               <th className="px-4 py-3 font-medium">Project Status</th>
+              <th className="px-4 py-3 font-medium">Renewals</th>
               <th className="px-4 py-3 font-medium">Created</th>
               <th className="px-4 py-3" />
             </tr>
@@ -95,6 +125,9 @@ export function ClientsTable({
                     value={c.project_status}
                     onChange={(s) => onPatchStatus(c.id, s)}
                   />
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <RenewalCell client={c} />
                 </td>
                 <td className="px-4 py-4 text-muted-foreground whitespace-nowrap">
                   {formatDate(c.created_at)}

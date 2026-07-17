@@ -6,13 +6,17 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock3,
+  Columns3,
   Download,
   Inbox,
+  LayoutDashboard,
   Loader2,
   LogOut,
+  ListChecks,
   PhoneCall,
   Plus,
   RefreshCw,
+  Table2,
   Users,
 } from "lucide-react";
 import {
@@ -30,6 +34,8 @@ import {
   createLead,
   deleteLead,
   fetchLeads,
+  nextSortOrder,
+  reorderLeads,
   updateLead,
 } from "../lib/leads";
 import {
@@ -38,19 +44,24 @@ import {
   fetchClients,
   updateClient,
 } from "../lib/clients";
+import { addTimelineEvent, fetchTodayCallCount } from "../lib/timeline";
+import { fetchOpenTasks } from "../lib/tasks";
 import type {
   Client,
   ClientPatch,
   Lead,
   LeadPatch,
+  LeadPriority,
   NewLeadInput,
   ProjectStatus,
+  Task,
 } from "../types";
-import { isWithinDays, exportToCsv } from "../utils";
+import { isWithinDays, exportToCsv, reindex } from "../utils";
 import { StatCard } from "./StatCard";
 import { LoadingState, EmptyState } from "./states";
 import { LeadFilters, EMPTY_FILTERS, type Filters } from "./LeadFilters";
 import { LeadTable } from "./LeadTable";
+import { LeadBoard } from "./LeadBoard";
 import { LeadDrawer } from "./LeadDrawer";
 import { AddLeadDialog } from "./AddLeadDialog";
 import {
@@ -61,11 +72,16 @@ import {
 import { ClientsTable } from "./ClientsTable";
 import { ClientWorkspace } from "./ClientWorkspace";
 import { CallScriptPage } from "./CallScriptPage";
+import { DashboardOverview } from "./DashboardOverview";
+import { GlobalSearch } from "./GlobalSearch";
+import { TasksTab } from "./TasksTab";
 
-type Tab = "leads" | "clients" | "callscript";
+type Tab = "overview" | "leads" | "clients" | "tasks" | "callscript";
+type LeadView = "board" | "table";
 
 export function Dashboard({ email }: { email: string }) {
-  const [tab, setTab] = useState<Tab>("leads");
+  const [tab, setTab] = useState<Tab>("overview");
+  const [leadView, setLeadView] = useState<LeadView>("board");
 
   // Leads state
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -88,6 +104,13 @@ export function Dashboard({ email }: { email: string }) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+
+  // Dashboard overview state
+  const [todayCallCount, setTodayCallCount] = useState(0);
+
+  // Tasks tab state
+  const [openTasks, setOpenTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
 
   async function loadLeads({ quiet = false }: { quiet?: boolean } = {}) {
     if (quiet) setRefreshing(true);
@@ -119,10 +142,29 @@ export function Dashboard({ email }: { email: string }) {
     }
   }
 
+  async function loadTasks() {
+    setTasksLoading(true);
+    try {
+      setOpenTasks(await fetchOpenTasks());
+    } catch {
+      setOpenTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadLeads();
     loadClients();
+    fetchTodayCallCount()
+      .then(setTodayCallCount)
+      .catch(() => setTodayCallCount(0));
   }, []);
+
+  useEffect(() => {
+    if (tab === "tasks") loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // ---------- LEADS ----------
   const filtered = useMemo(() => {
@@ -135,13 +177,21 @@ export function Dashboard({ email }: { email: string }) {
       if (!s) return true;
       return [
         l.name,
+        l.owner_name,
         l.business_name,
         l.email,
         l.phone,
+        l.whatsapp_number ?? "",
         l.industry,
+        l.business_category,
+        l.city ?? "",
+        l.instagram_url ?? "",
+        l.google_maps_url ?? "",
         l.budget,
         l.final_budget ?? "",
         l.message ?? "",
+        l.research_notes ?? "",
+        l.general_notes ?? "",
         l.status,
         l.priority,
         l.source,
@@ -156,7 +206,9 @@ export function Dashboard({ email }: { email: string }) {
       highPriority: leads.filter((l) => l.priority === "High").length,
       thisWeek: leads.filter((l) => isWithinDays(l.created_at, 7)).length,
       advanced: leads.filter((l) =>
-        ["Interested", "Proposal Sent"].includes(l.status),
+        ["Interested", "Demo Sent", "Meeting Scheduled", "Proposal Sent", "Negotiating"].includes(
+          l.status,
+        ),
       ).length,
     }),
     [leads],
@@ -168,19 +220,100 @@ export function Dashboard({ email }: { email: string }) {
     filters.status !== "All" ||
     filters.priority !== "All";
 
+  /**
+   * Single write path for every lead update — the drawer's field edits, the
+   * board's status/priority pills, and drag-driven priority moves all funnel
+   * through here. Beyond persisting the patch, it:
+   *   - auto-assigns a sort_order when priority changes without one already
+   *     supplied, so a lead always lands at the bottom of its new column;
+   *   - logs a Call History entry whenever status or priority actually change;
+   *   - automatically converts the lead into a Client the moment its status
+   *     becomes "Won" (unless it's already been converted).
+   */
   async function patchLead(id: string, patch: LeadPatch) {
-    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
-    setSelected((prev) => (prev?.id === id ? { ...prev, ...patch } : prev));
+    const before = leads.find((l) => l.id === id);
+    let finalPatch = patch;
+    if (
+      patch.priority &&
+      before &&
+      patch.priority !== before.priority &&
+      patch.sort_order === undefined
+    ) {
+      finalPatch = { ...patch, sort_order: nextSortOrder(leads, patch.priority) };
+    }
+
+    setLeads((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, ...finalPatch } : l)),
+    );
+    setSelected((prev) => (prev?.id === id ? { ...prev, ...finalPatch } : prev));
+
     try {
-      await updateLead(id, patch);
+      await updateLead(id, finalPatch);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed.");
+      loadLeads({ quiet: true });
+      return;
+    }
+
+    if (!before) return;
+
+    if (finalPatch.status && finalPatch.status !== before.status) {
+      addTimelineEvent(
+        "lead",
+        id,
+        "status_change",
+        `Status changed to ${finalPatch.status}`,
+      ).catch(() => {});
+
+      if (finalPatch.status === "Won") {
+        try {
+          const client = await convertLeadToClient({
+            ...before,
+            ...finalPatch,
+          } as Lead);
+          setClients((prev) => [client, ...prev.filter((c) => c.id !== client.id)]);
+        } catch (err) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Lead was marked Won, but auto-conversion to a client failed.",
+          );
+        }
+      }
+    }
+
+    if (finalPatch.priority && finalPatch.priority !== before.priority) {
+      addTimelineEvent(
+        "lead",
+        id,
+        "priority_change",
+        `Priority changed to ${finalPatch.priority}`,
+      ).catch(() => {});
+    }
+  }
+
+  async function handleReorderCommit(orderedIds: string[]) {
+    const updates = reindex(orderedIds);
+    const updateMap = new Map(updates.map((u) => [u.id, u.sort_order]));
+    setLeads((prev) =>
+      prev.map((l) =>
+        updateMap.has(l.id) ? { ...l, sort_order: updateMap.get(l.id)! } : l,
+      ),
+    );
+    try {
+      await reorderLeads(orderedIds);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reorder failed.");
       loadLeads({ quiet: true });
     }
   }
 
+  function handleChangePriority(id: string, priority: LeadPriority) {
+    patchLead(id, { priority });
+  }
+
   async function handleCreate(input: NewLeadInput) {
-    const created = await createLead(input);
+    const created = await createLead(input, leads);
     setLeads((prev) => [created, ...prev]);
   }
 
@@ -213,21 +346,31 @@ export function Dashboard({ email }: { email: string }) {
       filtered as unknown as Record<string, unknown>[],
       [
         "created_at",
-        "name",
+        "owner_name",
         "business_name",
         "email",
         "phone",
-        "industry",
-        "budget",
-        "final_budget",
+        "whatsapp_number",
+        "business_category",
+        "city",
         "source",
         "status",
         "priority",
-        "follow_up_date",
-        "message",
+        "next_followup_date",
+        "research_notes",
       ],
       "aurevon-leads",
     );
+  }
+
+  function openLeadFromSearch(lead: Lead) {
+    setTab("leads");
+    setSelected(lead);
+  }
+
+  function openClientFromSearch(client: Client) {
+    setTab("clients");
+    setSelectedClient(client);
   }
 
   // ---------- CLIENTS ----------
@@ -345,6 +488,7 @@ export function Dashboard({ email }: { email: string }) {
       "final_price",
       "advance_paid",
       "remaining_amount",
+      "monthly_revenue",
       "project_status",
     ];
     const rows = filteredClients.map((c) =>
@@ -369,16 +513,26 @@ export function Dashboard({ email }: { email: string }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/80 backdrop-blur-xl sticky top-0 z-30">
-        <div className="container-aurevon min-h-16 py-3 flex flex-col gap-3 sm:h-16 sm:flex-row sm:items-center sm:justify-between sm:py-0">
-          <Link to="/" className="flex min-w-0 items-center gap-2.5">
-            <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase hidden sm:inline">
-              Aurevon<span className="text-accent ml-1">Studios</span>
-            </span>
-            <span className="rounded-full border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              CRM
-            </span>
-          </Link>
-          <div className="flex min-w-0 items-center justify-between gap-3 sm:justify-end">
+        <div className="container-aurevon min-h-16 py-3 flex flex-col gap-3 lg:h-16 lg:flex-row lg:items-center lg:justify-between lg:py-0">
+          <div className="flex min-w-0 items-center justify-between gap-3 lg:justify-start">
+            <Link to="/" className="flex min-w-0 shrink-0 items-center gap-2.5">
+              <span className="font-display text-sm font-light tracking-[0.18em] text-foreground uppercase hidden sm:inline">
+                Aurevon<span className="text-accent ml-1">Studios</span>
+              </span>
+              <span className="rounded-full border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                CRM
+              </span>
+            </Link>
+          </div>
+          <div className="flex min-w-0 items-center gap-3 lg:flex-1 lg:justify-center">
+            <GlobalSearch
+              leads={leads}
+              clients={clients}
+              onSelectLead={openLeadFromSearch}
+              onSelectClient={openClientFromSearch}
+            />
+          </div>
+          <div className="flex min-w-0 items-center justify-between gap-3 lg:justify-end">
             <span className="truncate text-xs text-muted-foreground">
               {email}
             </span>
@@ -394,7 +548,17 @@ export function Dashboard({ email }: { email: string }) {
 
       <div className="container-aurevon py-6 md:py-8">
         {/* Tabs */}
-        <div className="mb-6 inline-flex rounded-full border border-border bg-surface p-1">
+        <div className="mb-6 inline-flex flex-wrap rounded-full border border-border bg-surface p-1">
+          <button
+            onClick={() => setTab("overview")}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+              tab === "overview"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutDashboard size={14} /> Dashboard
+          </button>
           <button
             onClick={() => setTab("leads")}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
@@ -416,6 +580,16 @@ export function Dashboard({ email }: { email: string }) {
             <Briefcase size={14} /> Clients
           </button>
           <button
+            onClick={() => setTab("tasks")}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+              tab === "tasks"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ListChecks size={14} /> Tasks
+          </button>
+          <button
             onClick={() => setTab("callscript")}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "callscript"
@@ -426,6 +600,37 @@ export function Dashboard({ email }: { email: string }) {
             <PhoneCall size={14} /> Call Scripts
           </button>
         </div>
+
+        {error && (
+          <div className="surface-card mb-4 flex items-start gap-3 p-4 text-sm text-destructive">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {tab === "overview" && (
+          <>
+            <div className="mb-6">
+              <div className="text-xs uppercase tracking-[0.24em] text-accent">
+                Overview
+              </div>
+              <h1 className="mt-2 text-3xl md:text-4xl text-foreground">
+                Good to see you, {email.split("@")[0]}.
+              </h1>
+            </div>
+            {loading || clientsLoading ? (
+              <LoadingState />
+            ) : (
+              <DashboardOverview
+                leads={leads}
+                clients={clients}
+                todayCallCount={todayCallCount}
+                onSelectLead={setSelected}
+                onSelectClient={setSelectedClient}
+              />
+            )}
+          </>
+        )}
 
         {tab === "leads" && (
           <>
@@ -460,6 +665,30 @@ export function Dashboard({ email }: { email: string }) {
                   <LeadFilters filters={filters} onChange={setFilters} />
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <div className="inline-flex rounded-full border border-border p-1">
+                    <button
+                      onClick={() => setLeadView("board")}
+                      aria-label="Board view"
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors ${
+                        leadView === "board"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Columns3 size={13} /> Board
+                    </button>
+                    <button
+                      onClick={() => setLeadView("table")}
+                      aria-label="Table view"
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors ${
+                        leadView === "table"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Table2 size={13} /> Table
+                    </button>
+                  </div>
                   <button
                     onClick={() => loadLeads({ quiet: true })}
                     disabled={refreshing}
@@ -483,30 +712,35 @@ export function Dashboard({ email }: { email: string }) {
               </div>
             </div>
 
-            {error && (
-              <div className="surface-card mb-4 flex items-start gap-3 p-4 text-sm text-destructive">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="surface-card overflow-hidden">
-              {loading ? (
+            {loading ? (
+              <div className="surface-card overflow-hidden">
                 <LoadingState />
-              ) : filtered.length === 0 ? (
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="surface-card overflow-hidden">
                 <EmptyState
                   hasFilters={hasFilters}
                   onClear={() => setFilters(EMPTY_FILTERS)}
                 />
-              ) : (
+              </div>
+            ) : leadView === "board" ? (
+              <LeadBoard
+                leads={filtered}
+                onSelect={setSelected}
+                onPatch={patchLead}
+                onReorderCommit={handleReorderCommit}
+                onChangePriority={handleChangePriority}
+              />
+            ) : (
+              <div className="surface-card overflow-hidden">
                 <LeadTable
                   leads={filtered}
                   onSelect={setSelected}
                   onPatch={patchLead}
                   onDelete={setLeadToDelete}
                 />
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
 
@@ -562,13 +796,6 @@ export function Dashboard({ email }: { email: string }) {
               </div>
             </div>
 
-            {error && (
-              <div className="surface-card mb-4 flex items-start gap-3 p-4 text-sm text-destructive">
-                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
             <div className="surface-card overflow-hidden">
               {clientsLoading ? (
                 <LoadingState />
@@ -588,6 +815,28 @@ export function Dashboard({ email }: { email: string }) {
                 />
               )}
             </div>
+          </>
+        )}
+
+        {tab === "tasks" && (
+          <>
+            <div className="mb-6">
+              <div className="text-xs uppercase tracking-[0.24em] text-accent">
+                Dashboard
+              </div>
+              <h1 className="mt-2 text-3xl md:text-4xl text-foreground">
+                Tasks
+              </h1>
+            </div>
+            <TasksTab
+              tasks={openTasks}
+              leads={leads}
+              clients={clients}
+              loading={tasksLoading}
+              onRefresh={loadTasks}
+              onSelectLead={setSelected}
+              onSelectClient={setSelectedClient}
+            />
           </>
         )}
 
@@ -633,8 +882,9 @@ export function Dashboard({ email }: { email: string }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               This permanently removes{" "}
-              {leadToDelete?.business_name ?? "this lead"} and all of its notes
-              from Supabase. This action cannot be undone.
+              {leadToDelete?.business_name ?? "this lead"} and all of its notes,
+              call history and tasks from Supabase. This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -668,7 +918,7 @@ export function Dashboard({ email }: { email: string }) {
             <AlertDialogDescription>
               This permanently removes{" "}
               {clientToDelete?.business_name ?? "this client"} and all of its
-              notes. This action cannot be undone.
+              notes, timeline and tasks. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

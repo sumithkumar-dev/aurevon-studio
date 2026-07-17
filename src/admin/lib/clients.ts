@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { addTimelineEvent } from "./timeline";
 import type {
   Client,
   ClientNote,
@@ -63,6 +64,30 @@ function normalise(row: Record<string, unknown>): Client {
     primary_contact_name: (row.primary_contact_name as string | null) ?? null,
     primary_contact_phone: (row.primary_contact_phone as string | null) ?? null,
     primary_contact_email: (row.primary_contact_email as string | null) ?? null,
+
+    // Infrastructure
+    domain_registrar: (row.domain_registrar as string | null) ?? null,
+    hosting_provider: (row.hosting_provider as string | null) ?? null,
+    github_url: (row.github_url as string | null) ?? null,
+    vercel_url: (row.vercel_url as string | null) ?? null,
+    supabase_project_url: (row.supabase_project_url as string | null) ?? null,
+    google_search_console_url:
+      (row.google_search_console_url as string | null) ?? null,
+    google_analytics_url: (row.google_analytics_url as string | null) ?? null,
+    google_business_profile_url:
+      (row.google_business_profile_url as string | null) ?? null,
+
+    // Plans & recurring revenue
+    monthly_plan: (row.monthly_plan as string | null) ?? null,
+    maintenance_plan: (row.maintenance_plan as string | null) ?? null,
+    monthly_revenue: Number(row.monthly_revenue ?? 0),
+
+    // Renewals
+    domain_expiry: (row.domain_expiry as string | null) ?? null,
+    hosting_expiry: (row.hosting_expiry as string | null) ?? null,
+
+    // Ongoing scope
+    current_features: (row.current_features as string | null) ?? null,
   };
 }
 
@@ -98,6 +123,14 @@ export async function createClient(input: NewClientInput): Promise<Client> {
   return normalise(data as Record<string, unknown>);
 }
 
+/**
+ * Converts a Won lead into a Client, carrying over every field we already
+ * know (contact details, business links, research) so the founder never
+ * has to retype anything. Idempotent — calling this twice for the same
+ * lead returns the existing client rather than creating a duplicate.
+ * Also seeds the client's Timeline with a "Converted from lead" entry so
+ * the full history (as a lead and then as a client) stays in one place.
+ */
 export async function convertLeadToClient(lead: Lead): Promise<Client> {
   const { data: existing } = await supabase
     .from(CLIENTS_TABLE)
@@ -106,13 +139,19 @@ export async function convertLeadToClient(lead: Lead): Promise<Client> {
     .maybeSingle();
   if (existing) return normalise(existing as Record<string, unknown>);
 
-  return createClient({
+  const notesParts = [
+    lead.research_notes?.trim() ? `Research notes:\n${lead.research_notes.trim()}` : null,
+    lead.pain_points?.trim() ? `Pain points: ${lead.pain_points.trim()}` : null,
+    lead.future_plans?.trim() ? `Future plans: ${lead.future_plans.trim()}` : null,
+  ].filter(Boolean);
+
+  const created = await createClient({
     lead_id: lead.id,
-    client_name: lead.name,
+    client_name: lead.owner_name || lead.name,
     business_name: lead.business_name,
     phone: lead.phone,
     email: lead.email,
-    industry: lead.industry,
+    industry: lead.business_category || lead.industry,
     source: lead.source,
     final_budget: lead.final_budget ?? lead.budget ?? null,
     quoted_price: null,
@@ -120,6 +159,32 @@ export async function convertLeadToClient(lead: Lead): Promise<Client> {
     advance_paid: 0,
     project_status: "Advance Pending",
   });
+
+  const patch: Record<string, unknown> = {
+    owner_name: lead.owner_name || null,
+    business_website: lead.website_url || null,
+    business_email: lead.email || null,
+    primary_contact_name: lead.owner_name || null,
+    primary_contact_phone: lead.phone || null,
+    primary_contact_email: lead.email || null,
+  };
+  if (notesParts.length) patch.terms_notes = notesParts.join("\n\n");
+
+  const { error: patchError } = await supabase
+    .from(CLIENTS_TABLE)
+    .update(patch)
+    .eq("id", created.id);
+  if (patchError) throw new Error(patchError.message);
+
+  await addTimelineEvent(
+    "client",
+    created.id,
+    "converted",
+    `Converted from lead — ${lead.business_name}`,
+    `Won on ${new Date().toLocaleDateString()}. Carried over from the lead pipeline.`,
+  );
+
+  return { ...created, ...patch } as Client;
 }
 
 export async function updateClient(
@@ -164,6 +229,12 @@ export async function updateClient(
 
 export async function deleteClient(id: string): Promise<void> {
   await supabase.from(NOTES_TABLE).delete().eq("client_id", id);
+  await supabase
+    .from("timeline_events")
+    .delete()
+    .eq("entity_type", "client")
+    .eq("entity_id", id);
+  await supabase.from("tasks").delete().eq("entity_type", "client").eq("entity_id", id);
   const { error } = await supabase.from(CLIENTS_TABLE).delete().eq("id", id);
   if (error) throw new Error(error.message);
 }

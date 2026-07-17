@@ -47,7 +47,7 @@ export function LeadFilters({
         <input
           value={filters.q}
           onChange={(e) => onChange({ ...filters, q: e.target.value })}
-          placeholder="Search name, email, business..."
+          placeholder="Search business, owner, phone, city, notes..."
           className="w-full bg-surface border border-border rounded-xl pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 transition-colors"
         />
       </div>

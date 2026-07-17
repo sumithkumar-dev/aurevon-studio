@@ -25,6 +25,29 @@ export type Database = {
           priority: string;
           final_budget: string | null;
           follow_up_date: string | null;
+          // --- Sales workflow CRM fields ---
+          owner_name: string | null;
+          whatsapp_number: string | null;
+          business_category: string | null;
+          city: string | null;
+          address: string | null;
+          website_url: string | null;
+          instagram_url: string | null;
+          google_maps_url: string | null;
+          facebook_url: string | null;
+          last_contact_date: string | null;
+          next_followup_date: string | null;
+          best_time_to_call: string | null;
+          preferred_contact_method: string | null;
+          decision_maker: string | null;
+          marketing_handled_by: string | null;
+          future_plans: string | null;
+          pain_points: string | null;
+          objections: string | null;
+          next_best_action: string | null;
+          general_notes: string | null;
+          research_notes: string | null;
+          sort_order: number;
         };
         Insert: {
           id?: string;
@@ -41,6 +64,28 @@ export type Database = {
           priority?: string;
           final_budget?: string | null;
           follow_up_date?: string | null;
+          owner_name?: string | null;
+          whatsapp_number?: string | null;
+          business_category?: string | null;
+          city?: string | null;
+          address?: string | null;
+          website_url?: string | null;
+          instagram_url?: string | null;
+          google_maps_url?: string | null;
+          facebook_url?: string | null;
+          last_contact_date?: string | null;
+          next_followup_date?: string | null;
+          best_time_to_call?: string | null;
+          preferred_contact_method?: string | null;
+          decision_maker?: string | null;
+          marketing_handled_by?: string | null;
+          future_plans?: string | null;
+          pain_points?: string | null;
+          objections?: string | null;
+          next_best_action?: string | null;
+          general_notes?: string | null;
+          research_notes?: string | null;
+          sort_order?: number;
         };
         Update: Partial<{
           id: string;
@@ -57,6 +102,28 @@ export type Database = {
           priority: string;
           final_budget: string | null;
           follow_up_date: string | null;
+          owner_name: string | null;
+          whatsapp_number: string | null;
+          business_category: string | null;
+          city: string | null;
+          address: string | null;
+          website_url: string | null;
+          instagram_url: string | null;
+          google_maps_url: string | null;
+          facebook_url: string | null;
+          last_contact_date: string | null;
+          next_followup_date: string | null;
+          best_time_to_call: string | null;
+          preferred_contact_method: string | null;
+          decision_maker: string | null;
+          marketing_handled_by: string | null;
+          future_plans: string | null;
+          pain_points: string | null;
+          objections: string | null;
+          next_best_action: string | null;
+          general_notes: string | null;
+          research_notes: string | null;
+          sort_order: number;
         }>;
         Relationships: [];
       };
@@ -127,6 +194,21 @@ export type Database = {
           primary_contact_name: string | null;
           primary_contact_phone: string | null;
           primary_contact_email: string | null;
+          // --- Infrastructure & renewals ---
+          domain_registrar: string | null;
+          hosting_provider: string | null;
+          github_url: string | null;
+          vercel_url: string | null;
+          supabase_project_url: string | null;
+          google_search_console_url: string | null;
+          google_analytics_url: string | null;
+          google_business_profile_url: string | null;
+          monthly_plan: string | null;
+          maintenance_plan: string | null;
+          monthly_revenue: number;
+          domain_expiry: string | null;
+          hosting_expiry: string | null;
+          current_features: string | null;
         };
         Insert: {
           id?: string;
@@ -166,6 +248,20 @@ export type Database = {
           primary_contact_name?: string | null;
           primary_contact_phone?: string | null;
           primary_contact_email?: string | null;
+          domain_registrar?: string | null;
+          hosting_provider?: string | null;
+          github_url?: string | null;
+          vercel_url?: string | null;
+          supabase_project_url?: string | null;
+          google_search_console_url?: string | null;
+          google_analytics_url?: string | null;
+          google_business_profile_url?: string | null;
+          monthly_plan?: string | null;
+          maintenance_plan?: string | null;
+          monthly_revenue?: number;
+          domain_expiry?: string | null;
+          hosting_expiry?: string | null;
+          current_features?: string | null;
         };
         Update: Partial<{
           id: string;
@@ -205,6 +301,20 @@ export type Database = {
           primary_contact_name: string | null;
           primary_contact_phone: string | null;
           primary_contact_email: string | null;
+          domain_registrar: string | null;
+          hosting_provider: string | null;
+          github_url: string | null;
+          vercel_url: string | null;
+          supabase_project_url: string | null;
+          google_search_console_url: string | null;
+          google_analytics_url: string | null;
+          google_business_profile_url: string | null;
+          monthly_plan: string | null;
+          maintenance_plan: string | null;
+          monthly_revenue: number;
+          domain_expiry: string | null;
+          hosting_expiry: string | null;
+          current_features: string | null;
         }>;
         Relationships: [];
       };
@@ -281,6 +391,69 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      timeline_events: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          event_type: string;
+          title: string;
+          body: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          event_type: string;
+          title: string;
+          body?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          event_type: string;
+          title: string;
+          body: string | null;
+          created_at: string;
+        }>;
+        Relationships: [];
+      };
+      tasks: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          due_date: string | null;
+          is_done: boolean;
+          completed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          due_date?: string | null;
+          is_done?: boolean;
+          completed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<{
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          due_date: string | null;
+          is_done: boolean;
+          completed_at: string | null;
+          created_at: string;
+        }>;
+        Relationships: [];
       };
       call_scripts: {
         Row: {

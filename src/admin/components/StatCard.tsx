@@ -5,7 +5,7 @@ export function StatCard({
   tone,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   tone: "accent" | "blue" | "red" | "green" | "violet";
 }) {
@@ -24,7 +24,7 @@ export function StatCard({
           <div className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             {label}
           </div>
-          <div className="mt-2 text-3xl font-display text-foreground">
+          <div className="mt-2 truncate text-3xl font-display text-foreground">
             {value}
           </div>
         </div>

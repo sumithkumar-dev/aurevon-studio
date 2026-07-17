@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Activity,
   AlertTriangle,
   ArrowLeft,
   ArrowUpDown,
@@ -13,10 +14,12 @@ import {
   FileText,
   Globe,
   ListChecks,
+  ListTodo,
   Loader2,
   Mail,
   Phone,
   Plus,
+  Server,
   StickyNote,
   Tag,
   Trash2,
@@ -43,6 +46,9 @@ import {
   toDateInputValue,
 } from "../utils";
 import { ClientNotesSection } from "./ClientNotesSection";
+import { Timeline } from "./Timeline";
+import { TasksPanel } from "./TasksPanel";
+import { CLIENT_TIMELINE_EVENT_TYPES } from "../constants";
 import { fetchClientDocuments, upsertDocument } from "../lib/documents";
 import { generateAndPrint, getMissingFields } from "../lib/proposal";
 import {
@@ -594,10 +600,13 @@ function CheckboxListEditor({
 type TabKey =
   | "client"
   | "business"
+  | "infra"
   | "project"
   | "scope"
   | "timeline"
   | "pricing"
+  | "activity"
+  | "tasks"
   | "documents"
   | "notes";
 
@@ -608,10 +617,13 @@ const TABS: {
 }[] = [
   { key: "client", label: "Client", Icon: User },
   { key: "business", label: "Business", Icon: Building2 },
+  { key: "infra", label: "Infrastructure", Icon: Server },
   { key: "project", label: "Project", Icon: Briefcase },
   { key: "scope", label: "Scope", Icon: ListChecks },
-  { key: "timeline", label: "Timeline", Icon: CalendarClock },
+  { key: "timeline", label: "Delivery Timeline", Icon: CalendarClock },
   { key: "pricing", label: "Pricing", Icon: CircleDollarSign },
+  { key: "activity", label: "Activity", Icon: Activity },
+  { key: "tasks", label: "Tasks", Icon: ListTodo },
   { key: "documents", label: "Documents", Icon: FileText },
   { key: "notes", label: "Notes", Icon: StickyNote },
 ];
@@ -920,6 +932,9 @@ export function ClientWorkspace({
           {tab === "business" && (
             <BusinessTab client={client} onPatch={handlePatch} />
           )}
+          {tab === "infra" && (
+            <InfraTab client={client} onPatch={handlePatch} />
+          )}
           {tab === "project" && (
             <ProjectTab
               client={client}
@@ -946,6 +961,30 @@ export function ClientWorkspace({
               onPatch={handlePatch}
               onPatchWorkspace={patchWorkspace}
             />
+          )}
+          {tab === "activity" && (
+            <SectionCard
+              title="Activity"
+              description="Everything that's happened with this client — delivery, bug fixes, feature requests, event updates, payments, meetings and calls — in one timeline."
+              Icon={Activity}
+            >
+              <Timeline
+                entityType="client"
+                entityId={client.id}
+                eventTypeOptions={CLIENT_TIMELINE_EVENT_TYPES}
+                title=""
+                emptyLabel="No activity logged yet."
+              />
+            </SectionCard>
+          )}
+          {tab === "tasks" && (
+            <SectionCard
+              title="Tasks"
+              description="To-dos for this client — collect logo, deploy website, and so on."
+              Icon={ListTodo}
+            >
+              <TasksPanel entityType="client" entityId={client.id} title="" />
+            </SectionCard>
           )}
           {tab === "documents" && (
             <DocumentsTab
@@ -1132,6 +1171,161 @@ function BusinessTab({
         </div>
       </div>
     </SectionCard>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab: Infrastructure                                                 */
+/* ------------------------------------------------------------------ */
+
+function InfraTab({
+  client,
+  onPatch,
+}: {
+  client: Client;
+  onPatch: (patch: ClientPatch) => void | Promise<void>;
+}) {
+  return (
+    <>
+      <SectionCard
+        title="Hosting & infrastructure"
+        description="Where everything for this client actually lives."
+        Icon={Server}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Domain registrar">
+            <TextInput
+              value={client.domain_registrar}
+              onCommit={(v) => onPatch({ domain_registrar: v })}
+              placeholder="GoDaddy, Namecheap..."
+            />
+          </Field>
+          <Field label="Domain expiry">
+            <TextInput
+              type="date"
+              value={client.domain_expiry}
+              onCommit={(v) => onPatch({ domain_expiry: v })}
+            />
+          </Field>
+          <Field label="Hosting provider">
+            <TextInput
+              value={client.hosting_provider}
+              onCommit={(v) => onPatch({ hosting_provider: v })}
+              placeholder="Vercel, Hostinger..."
+            />
+          </Field>
+          <Field label="Hosting expiry">
+            <TextInput
+              type="date"
+              value={client.hosting_expiry}
+              onCommit={(v) => onPatch({ hosting_expiry: v })}
+            />
+          </Field>
+          <Field label="GitHub repository">
+            <TextInput
+              type="url"
+              value={client.github_url}
+              onCommit={(v) => onPatch({ github_url: v })}
+              placeholder="https://github.com/..."
+            />
+          </Field>
+          <Field label="Vercel project">
+            <TextInput
+              type="url"
+              value={client.vercel_url}
+              onCommit={(v) => onPatch({ vercel_url: v })}
+              placeholder="https://vercel.com/..."
+            />
+          </Field>
+          <Field label="Supabase project">
+            <TextInput
+              type="url"
+              value={client.supabase_project_url}
+              onCommit={(v) => onPatch({ supabase_project_url: v })}
+              placeholder="https://supabase.com/dashboard/project/..."
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Marketing & analytics"
+        description="Search Console, Analytics, and the Google Business Profile."
+        Icon={Globe}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Google Search Console">
+            <TextInput
+              type="url"
+              value={client.google_search_console_url}
+              onCommit={(v) => onPatch({ google_search_console_url: v })}
+              placeholder="https://search.google.com/search-console"
+            />
+          </Field>
+          <Field label="Google Analytics">
+            <TextInput
+              type="url"
+              value={client.google_analytics_url}
+              onCommit={(v) => onPatch({ google_analytics_url: v })}
+              placeholder="https://analytics.google.com/..."
+            />
+          </Field>
+          <div className="md:col-span-2">
+            <Field label="Google Business Profile">
+              <TextInput
+                type="url"
+                value={client.google_business_profile_url}
+                onCommit={(v) => onPatch({ google_business_profile_url: v })}
+                placeholder="https://business.google.com/..."
+              />
+            </Field>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Plans & recurring revenue"
+        description="What they're paying for on an ongoing basis."
+        Icon={CircleDollarSign}
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Monthly plan">
+            <TextInput
+              value={client.monthly_plan}
+              onCommit={(v) => onPatch({ monthly_plan: v })}
+              placeholder="e.g. Starter, Growth, Custom"
+            />
+          </Field>
+          <Field label="Maintenance plan">
+            <TextInput
+              value={client.maintenance_plan}
+              onCommit={(v) => onPatch({ maintenance_plan: v })}
+              placeholder="e.g. Basic upkeep, Priority support"
+            />
+          </Field>
+          <Field label="Monthly revenue" hint="Included in the dashboard's MRR total.">
+            <NumberInput
+              value={client.monthly_revenue}
+              onCommit={(v) => onPatch({ monthly_revenue: v ?? 0 })}
+              placeholder="0"
+            />
+          </Field>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Current features"
+        description="What's live on the site today — keep this current as you ship changes."
+        Icon={ListChecks}
+      >
+        <TextArea
+          value={client.current_features}
+          onCommit={(v) => onPatch({ current_features: v })}
+          placeholder="e.g. Online booking, WhatsApp click-to-chat, Google Reviews widget..."
+          rows={5}
+        />
+      </SectionCard>
+    </>
   );
 }
 
