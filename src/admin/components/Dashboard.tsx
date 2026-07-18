@@ -79,7 +79,13 @@ import { TasksTab } from "./TasksTab";
 type Tab = "overview" | "leads" | "clients" | "tasks" | "callscript";
 type LeadView = "board" | "table";
 
-export function Dashboard({ email }: { email: string }) {
+export function Dashboard({
+  email,
+  fullName,
+}: {
+  email: string;
+  fullName?: string | null;
+}) {
   const [tab, setTab] = useState<Tab>("overview");
   const [leadView, setLeadView] = useState<LeadView>("board");
 
@@ -98,9 +104,8 @@ export function Dashboard({ email }: { email: string }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsRefreshing, setClientsRefreshing] = useState(false);
-  const [clientFilters, setClientFilters] = useState<ClientFiltersState>(
-    EMPTY_CLIENT_FILTERS,
-  );
+  const [clientFilters, setClientFilters] =
+    useState<ClientFiltersState>(EMPTY_CLIENT_FILTERS);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
@@ -206,9 +211,13 @@ export function Dashboard({ email }: { email: string }) {
       highPriority: leads.filter((l) => l.priority === "High").length,
       thisWeek: leads.filter((l) => isWithinDays(l.created_at, 7)).length,
       advanced: leads.filter((l) =>
-        ["Interested", "Demo Sent", "Meeting Scheduled", "Proposal Sent", "Negotiating"].includes(
-          l.status,
-        ),
+        [
+          "Interested",
+          "Demo Sent",
+          "Meeting Scheduled",
+          "Proposal Sent",
+          "Negotiating",
+        ].includes(l.status),
       ).length,
     }),
     [leads],
@@ -239,13 +248,18 @@ export function Dashboard({ email }: { email: string }) {
       patch.priority !== before.priority &&
       patch.sort_order === undefined
     ) {
-      finalPatch = { ...patch, sort_order: nextSortOrder(leads, patch.priority) };
+      finalPatch = {
+        ...patch,
+        sort_order: nextSortOrder(leads, patch.priority),
+      };
     }
 
     setLeads((prev) =>
       prev.map((l) => (l.id === id ? { ...l, ...finalPatch } : l)),
     );
-    setSelected((prev) => (prev?.id === id ? { ...prev, ...finalPatch } : prev));
+    setSelected((prev) =>
+      prev?.id === id ? { ...prev, ...finalPatch } : prev,
+    );
 
     try {
       await updateLead(id, finalPatch);
@@ -271,7 +285,10 @@ export function Dashboard({ email }: { email: string }) {
             ...before,
             ...finalPatch,
           } as Lead);
-          setClients((prev) => [client, ...prev.filter((c) => c.id !== client.id)]);
+          setClients((prev) => [
+            client,
+            ...prev.filter((c) => c.id !== client.id),
+          ]);
         } catch (err) {
           setError(
             err instanceof Error
@@ -430,8 +447,8 @@ export function Dashboard({ email }: { email: string }) {
         : // Otherwise derive it from whatever pricing fields this patch contains
           Math.max(
             0,
-            (patch.final_price  ?? currentClient?.final_price  ?? 0) -
-            (patch.advance_paid ?? currentClient?.advance_paid ?? 0),
+            (patch.final_price ?? currentClient?.final_price ?? 0) -
+              (patch.advance_paid ?? currentClient?.advance_paid ?? 0),
           );
 
     // Build the patch that always writes remaining_amount to Supabase
@@ -442,9 +459,7 @@ export function Dashboard({ email }: { email: string }) {
 
     // Optimistic UI update — apply immediately so the UI feels instant.
     setClients((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, ...persistPatch } : c,
-      ),
+      prev.map((c) => (c.id === id ? { ...c, ...persistPatch } : c)),
     );
     setSelectedClient((prev) =>
       prev?.id === id ? { ...prev, ...persistPatch } : prev,
@@ -615,7 +630,7 @@ export function Dashboard({ email }: { email: string }) {
                 Overview
               </div>
               <h1 className="mt-2 text-3xl md:text-4xl text-foreground">
-                Good to see you, {email.split("@")[0]}.
+                Good to see you, {fullName || email.split("@")[0]}.
               </h1>
             </div>
             {loading || clientsLoading ? (
@@ -652,11 +667,36 @@ export function Dashboard({ email }: { email: string }) {
             </div>
 
             <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <StatCard label="Total leads" value={stats.total} Icon={Inbox} tone="accent" />
-              <StatCard label="New" value={stats.newCount} Icon={Clock3} tone="blue" />
-              <StatCard label="High priority" value={stats.highPriority} Icon={AlertTriangle} tone="red" />
-              <StatCard label="This week" value={stats.thisWeek} Icon={CalendarClock} tone="green" />
-              <StatCard label="In progress" value={stats.advanced} Icon={CheckCircle2} tone="violet" />
+              <StatCard
+                label="Total leads"
+                value={stats.total}
+                Icon={Inbox}
+                tone="accent"
+              />
+              <StatCard
+                label="New"
+                value={stats.newCount}
+                Icon={Clock3}
+                tone="blue"
+              />
+              <StatCard
+                label="High priority"
+                value={stats.highPriority}
+                Icon={AlertTriangle}
+                tone="red"
+              />
+              <StatCard
+                label="This week"
+                value={stats.thisWeek}
+                Icon={CalendarClock}
+                tone="green"
+              />
+              <StatCard
+                label="In progress"
+                value={stats.advanced}
+                Icon={CheckCircle2}
+                tone="violet"
+              />
             </div>
 
             <div className="surface-card mb-4 p-3 md:p-4">
@@ -758,10 +798,30 @@ export function Dashboard({ email }: { email: string }) {
             </div>
 
             <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Total clients" value={clientStats.total} Icon={Briefcase} tone="accent" />
-              <StatCard label="Active" value={clientStats.active} Icon={Clock3} tone="violet" />
-              <StatCard label="Delivered" value={clientStats.delivered} Icon={CheckCircle2} tone="green" />
-              <StatCard label="Advance pending" value={clientStats.pending} Icon={AlertTriangle} tone="red" />
+              <StatCard
+                label="Total clients"
+                value={clientStats.total}
+                Icon={Briefcase}
+                tone="accent"
+              />
+              <StatCard
+                label="Active"
+                value={clientStats.active}
+                Icon={Clock3}
+                tone="violet"
+              />
+              <StatCard
+                label="Delivered"
+                value={clientStats.delivered}
+                Icon={CheckCircle2}
+                tone="green"
+              />
+              <StatCard
+                label="Advance pending"
+                value={clientStats.pending}
+                Icon={AlertTriangle}
+                tone="red"
+              />
             </div>
 
             <div className="surface-card mb-4 p-3 md:p-4">
@@ -840,9 +900,7 @@ export function Dashboard({ email }: { email: string }) {
           </>
         )}
 
-        {tab === "callscript" && (
-          <CallScriptPage />
-        )}
+        {tab === "callscript" && <CallScriptPage />}
       </div>
 
       {selected && (
@@ -888,7 +946,9 @@ export function Dashboard({ email }: { email: string }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteLead}
               className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -922,7 +982,9 @@ export function Dashboard({ email }: { email: string }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteClient}
               className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
