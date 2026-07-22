@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 
 const fieldClass =
-  "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
+  "w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
 const textareaClass = fieldClass + " min-h-[112px] resize-y";
 
 function toNum(v: string): number | null {

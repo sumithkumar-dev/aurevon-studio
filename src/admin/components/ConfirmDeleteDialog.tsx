@@ -36,7 +36,7 @@ export function ConfirmDeleteDialog({
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="mx-4 max-w-md surface-card border-border">
+      <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md surface-card border-border">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground">{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>

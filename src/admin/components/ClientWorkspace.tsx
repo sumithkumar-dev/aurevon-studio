@@ -85,7 +85,7 @@ import {
 /* ------------------------------------------------------------------ */
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-ring/30 transition-colors";
+  "w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-ring/30 transition-colors";
 const textareaClass = inputClass + " min-h-[96px] resize-y leading-relaxed";
 
 function toNum(v: string): number | null {
@@ -110,7 +110,7 @@ function SectionCard({
 }) {
   return (
     <section className="rounded-3xl border border-border bg-card/40 p-5 md:p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]">
-      <header className="mb-5 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+      <header className="mb-5 flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             {Icon ? (
@@ -1574,7 +1574,7 @@ function TimelineTab({
       description="Phases, milestones and target dates. Edit dates only — structure is pre-built."
       Icon={CalendarClock}
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -1901,7 +1901,7 @@ function PricingTab({
         description="Auto-generated from project type and pages. Edit amounts and labels freely."
         Icon={Tag}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {workspace.pricing_items.length > 1 && (
               <SortMenu
                 onSort={sortPricingItems}
@@ -2016,7 +2016,7 @@ function PricingTab({
         description="Auto-created as 50% advance + 50% final. Amounts recalculate with total price."
         Icon={CheckCircle2}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {workspace.milestones.length > 1 && (
               <SortMenu
                 onSort={sortMilestones}
@@ -2077,43 +2077,61 @@ function PricingTab({
                 key={m.id}
                 className="flex flex-col gap-2 rounded-xl border border-border bg-background/40 px-3 py-2"
               >
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(120px,150px)_minmax(120px,150px)_auto] items-center gap-2">
-                  <label className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-background hover:border-accent/60">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(m.paid)}
-                      onChange={(e) =>
-                        updateMilestone(
-                          m.id,
-                          e.target.checked
-                            ? { paid: true }
-                            : { paid: false, paid_via: null },
-                        )
-                      }
-                      className="size-3.5 accent-[color:var(--accent)]"
-                      aria-label="Mark milestone as paid"
+                <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_minmax(120px,150px)_minmax(120px,150px)_auto] sm:items-center">
+                  <div className="flex items-center gap-2 sm:contents">
+                    <label className="grid size-8 shrink-0 place-items-center rounded-md border border-border bg-background hover:border-accent/60">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(m.paid)}
+                        onChange={(e) =>
+                          updateMilestone(
+                            m.id,
+                            e.target.checked
+                              ? { paid: true }
+                              : { paid: false, paid_via: null },
+                          )
+                        }
+                        className="size-3.5 accent-[color:var(--accent)]"
+                        aria-label="Mark milestone as paid"
+                      />
+                    </label>
+                    <MilestoneTextInput
+                      value={m.label}
+                      onCommit={(v) => updateMilestone(m.id, { label: v ?? "" })}
+                      placeholder="Milestone label (e.g. 50% on kickoff)"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none"
                     />
-                  </label>
-                  <MilestoneTextInput
-                    value={m.label}
-                    onCommit={(v) => updateMilestone(m.id, { label: v ?? "" })}
-                    placeholder="Milestone label (e.g. 50% on kickoff)"
-                    className="min-w-0 bg-transparent text-sm text-foreground outline-none"
-                  />
-                  <input
-                    type="date"
-                    defaultValue={toDateInputValue(m.due ?? null)}
-                    key={`due-${m.id}-${m.due ?? ""}`}
-                    onBlur={(e) =>
-                      updateMilestone(m.id, { due: e.target.value || null })
-                    }
-                    className="rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent/60"
-                  />
-                  <MilestoneAmountInput
-                    value={m.amount}
-                    onCommit={(v) => updateMilestone(m.id, { amount: v ?? 0 })}
-                    className="rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm text-foreground outline-none focus:border-accent/60"
-                  />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onPatchWorkspace({
+                          milestones: workspace.milestones.filter(
+                            (x) => x.id !== m.id,
+                          ),
+                        })
+                      }
+                      className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:hidden"
+                      aria-label="Remove milestone"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pl-10 sm:contents sm:pl-0">
+                    <input
+                      type="date"
+                      defaultValue={toDateInputValue(m.due ?? null)}
+                      key={`due-${m.id}-${m.due ?? ""}`}
+                      onBlur={(e) =>
+                        updateMilestone(m.id, { due: e.target.value || null })
+                      }
+                      className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground outline-none focus:border-accent/60"
+                    />
+                    <MilestoneAmountInput
+                      value={m.amount}
+                      onCommit={(v) => updateMilestone(m.id, { amount: v ?? 0 })}
+                      className="min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-right text-sm text-foreground outline-none focus:border-accent/60"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() =>
@@ -2123,7 +2141,7 @@ function PricingTab({
                         ),
                       })
                     }
-                    className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    className="hidden rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive sm:block"
                     aria-label="Remove milestone"
                   >
                     <Trash2 size={14} />
@@ -2143,7 +2161,7 @@ function PricingTab({
                     >
                       <SelectTrigger
                         className={
-                          "h-auto w-auto min-w-[180px] gap-1 rounded-md border bg-background px-2 py-1 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40 " +
+                          "h-auto w-full gap-1 rounded-md border bg-background px-2 py-1 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40 sm:w-auto sm:min-w-[180px] " +
                           (m.paid_via ? "border-border" : "border-accent/60")
                         }
                       >

@@ -157,7 +157,7 @@ export function Timeline({
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           placeholder="What happened? e.g. Owner busy, call back after 5pm"
-          className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
+          className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60"
         />
         <button
           onClick={handleAdd}
@@ -208,7 +208,7 @@ export function Timeline({
                           </div>
                           <button
                             onClick={() => setPendingDeleteId(ev.id)}
-                            className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                            className="shrink-0 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100"
                             aria-label="Delete entry"
                           >
                             <Trash2 size={13} />

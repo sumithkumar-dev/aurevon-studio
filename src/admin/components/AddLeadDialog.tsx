@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 
 const fieldClass =
-  "mt-2 w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 transition-colors";
+  "mt-2 w-full min-w-0 bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 transition-colors";
 const selectTriggerClass =
   "mt-2 w-full h-auto bg-background border border-border rounded-xl px-3 py-2.5 text-sm text-foreground shadow-none focus:ring-2 focus:ring-ring/40";
 const labelClass =

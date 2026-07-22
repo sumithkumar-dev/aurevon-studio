@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
+  "w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60";
 const textareaClass = inputClass + " min-h-[80px] resize-y leading-relaxed";
 const labelClass =
   "mb-1.5 block text-[10px] uppercase tracking-[0.2em] text-muted-foreground";

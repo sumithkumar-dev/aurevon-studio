@@ -122,7 +122,7 @@ function deriveTitle(text: string): string {
 
 /* ── Styles ─────────────────────────────────────────────────────────── */
 const inputClass =
-  "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-ring/30 transition-colors";
+  "w-full min-w-0 rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent/60 focus:ring-2 focus:ring-ring/30 transition-colors";
 const textareaClass = inputClass + " leading-relaxed";
 
 /* ── Auto-growing textarea ──────────────────────────────────────────────
@@ -262,8 +262,8 @@ function ScriptListView({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <div className="text-xs uppercase tracking-[0.24em] text-accent">
             Cold Outreach
           </div>
@@ -277,7 +277,7 @@ function ScriptListView({
         <button
           onClick={onCreate}
           disabled={creating}
-          className="inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-2.5 text-sm font-medium hover:bg-accent/80 transition-colors disabled:opacity-60"
+          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-accent text-accent-foreground px-5 py-2.5 text-sm font-medium hover:bg-accent/80 transition-colors disabled:opacity-60"
         >
           {creating ? (
             <Loader2 size={14} className="animate-spin" />
@@ -289,9 +289,9 @@ function ScriptListView({
       </div>
 
       {error && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <span className="flex items-center gap-2">
-            <AlertTriangle size={15} /> {error}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span className="flex min-w-0 items-center gap-2 break-words">
+            <AlertTriangle size={15} className="shrink-0" /> {error}
           </span>
           <button
             onClick={onRetry}
@@ -438,13 +438,13 @@ function BlockFocusModal({
           autoCapitalize="off"
           className="flex-1 resize-none overflow-y-auto rounded-sm bg-transparent px-6 py-5 text-[15px] leading-[1.8] text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60 focus-visible:ring-inset"
         />
-        <div className="flex items-center justify-between border-t border-border/60 px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-6 py-3">
           <span className="text-xs text-muted-foreground">
             {wordCount} word{wordCount !== 1 ? "s" : ""} · Autosaved · Select text and right-click to split it into its own block
           </span>
           <button
             onClick={onClose}
-            className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors"
+            className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/80 transition-colors"
           >
             Done
           </button>
@@ -860,19 +860,19 @@ function ScriptEditor({
     return (
       <div className="space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between rounded-2xl border border-border bg-card/60 px-5 py-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-500/20 text-green-400">
               <PhoneCall size={16} />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">{name}</p>
-              <p className="text-xs text-muted-foreground">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">{name}</p>
+              <p className="truncate text-xs text-muted-foreground">
                 Live Call Mode · {progress}% · {Object.values(checked).filter(Boolean).length}/{blocks.length} steps
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-0.5 rounded-full border border-border p-0.5">
               {(["sm", "base", "lg"] as ReadingSize[]).map((size) => (
                 <button
@@ -951,7 +951,7 @@ function ScriptEditor({
                     {KIND_LABELS[block.kind]}
                   </span>
                   <span
-                    className={`flex-1 text-sm font-medium ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}
+                    className={`min-w-0 flex-1 truncate text-sm font-medium ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}
                   >
                     {block.title}
                   </span>
@@ -1007,10 +1007,10 @@ function ScriptEditor({
     <div className="space-y-4">
       {/* Edit header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={14} />
           </button>
@@ -1020,7 +1020,7 @@ function ScriptEditor({
             spellCheck={false}
             autoCorrect="off"
             autoCapitalize="off"
-            className="bg-transparent text-xl font-medium text-foreground focus:outline-none border-b border-transparent focus:border-accent/40 transition-colors pb-0.5"
+            className="min-w-0 flex-1 bg-transparent text-xl font-medium text-foreground focus:outline-none border-b border-transparent focus:border-accent/40 transition-colors pb-0.5 sm:flex-initial"
             placeholder="Script name…"
           />
           {saveStatus === "saving" && (
@@ -1161,65 +1161,67 @@ function ScriptEditor({
                 key={block.id}
                 className="surface-card overflow-hidden p-0"
               >
-                <div className="flex items-center gap-3 px-4 py-3">
-                  {/* Reorder */}
-                  <div className="flex shrink-0 flex-col gap-0.5">
-                    <button
-                      onClick={() => moveBlock(block.id, -1)}
-                      disabled={idx === 0}
-                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
+                <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="flex items-center gap-3 sm:contents">
+                    {/* Reorder */}
+                    <div className="flex shrink-0 flex-col gap-0.5">
+                      <button
+                        onClick={() => moveBlock(block.id, -1)}
+                        disabled={idx === 0}
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        onClick={() => moveBlock(block.id, 1)}
+                        disabled={idx === blocks.length - 1}
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
+                      >
+                        <ChevronDown size={12} />
+                      </button>
+                    </div>
+
+                    {/* Kind */}
+                    <Select
+                      value={block.kind}
+                      onValueChange={(v) =>
+                        updateBlock(
+                          block.id,
+                          { kind: v as CallScriptBlockKind },
+                          { immediate: true },
+                        )
+                      }
                     >
-                      <ChevronUp size={12} />
-                    </button>
-                    <button
-                      onClick={() => moveBlock(block.id, 1)}
-                      disabled={idx === blocks.length - 1}
-                      className="rounded p-0.5 text-muted-foreground hover:text-foreground disabled:opacity-25 transition-colors"
-                    >
-                      <ChevronDown size={12} />
-                    </button>
+                      <SelectTrigger
+                        className={`h-auto w-auto shrink-0 gap-1 rounded-full border bg-transparent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-none focus:ring-2 focus:ring-ring/60 focus:ring-offset-0 ${KIND_COLORS[block.kind]}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {KIND_ORDER.map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {KIND_LABELS[k]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Title */}
+                    <input
+                      value={block.title}
+                      onChange={(e) =>
+                        updateBlock(block.id, { title: e.target.value })
+                      }
+                      spellCheck={false}
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      className="min-w-0 flex-1 rounded-sm bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
+                      placeholder="Block title…"
+                    />
                   </div>
 
-                  {/* Kind */}
-                  <Select
-                    value={block.kind}
-                    onValueChange={(v) =>
-                      updateBlock(
-                        block.id,
-                        { kind: v as CallScriptBlockKind },
-                        { immediate: true },
-                      )
-                    }
-                  >
-                    <SelectTrigger
-                      className={`h-auto w-auto shrink-0 gap-1 rounded-full border bg-transparent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider shadow-none focus:ring-2 focus:ring-ring/60 focus:ring-offset-0 ${KIND_COLORS[block.kind]}`}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {KIND_ORDER.map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {KIND_LABELS[k]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Title */}
-                  <input
-                    value={block.title}
-                    onChange={(e) =>
-                      updateBlock(block.id, { title: e.target.value })
-                    }
-                    spellCheck={false}
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    className="min-w-0 flex-1 rounded-sm bg-transparent text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-accent/60"
-                    placeholder="Block title…"
-                  />
-
                   {/* Focus / expand / delete */}
-                  <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1 sm:contents">
                     <button
                       onClick={() => setFocusedBlockId(block.id)}
                       className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"

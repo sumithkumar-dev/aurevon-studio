@@ -563,10 +563,10 @@ export function Dashboard({
 
       <div className="container-aurevon py-6 md:py-8">
         {/* Tabs */}
-        <div className="mb-6 inline-flex flex-wrap rounded-full border border-border bg-surface p-1">
+        <div className="mb-6 flex flex-nowrap items-center gap-1 overflow-x-auto rounded-full border border-border bg-surface p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => setTab("overview")}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "overview"
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -576,7 +576,7 @@ export function Dashboard({
           </button>
           <button
             onClick={() => setTab("leads")}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "leads"
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -586,7 +586,7 @@ export function Dashboard({
           </button>
           <button
             onClick={() => setTab("clients")}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "clients"
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -596,7 +596,7 @@ export function Dashboard({
           </button>
           <button
             onClick={() => setTab("tasks")}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "tasks"
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -606,7 +606,7 @@ export function Dashboard({
           </button>
           <button
             onClick={() => setTab("callscript")}
-            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors ${
               tab === "callscript"
                 ? "bg-accent text-accent-foreground"
                 : "text-muted-foreground hover:text-foreground"
@@ -705,7 +705,7 @@ export function Dashboard({
                   <LeadFilters filters={filters} onChange={setFilters} />
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-                  <div className="inline-flex rounded-full border border-border p-1">
+                  <div className="col-span-2 flex justify-center rounded-full border border-border p-1 sm:col-span-1 sm:inline-flex">
                     <button
                       onClick={() => setLeadView("board")}
                       aria-label="Board view"
@@ -933,7 +933,7 @@ export function Dashboard({
         open={Boolean(leadToDelete)}
         onOpenChange={(open) => !open && setLeadToDelete(null)}
       >
-        <AlertDialogContent className="mx-4 max-w-md surface-card border-border">
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md surface-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">
               Delete lead?
@@ -970,7 +970,7 @@ export function Dashboard({
         open={Boolean(clientToDelete)}
         onOpenChange={(open) => !open && setClientToDelete(null)}
       >
-        <AlertDialogContent className="mx-4 max-w-md surface-card border-border">
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md surface-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground">
               Delete client?
